@@ -118,14 +118,14 @@ export function GroupHeader({ onOpenCabinet, userProfile }: GroupHeaderProps) {
           </button>
 
           <a
-            href="/pizza/"
+            href="/urban-bites/restaurants/"
             className="hidden sm:inline-flex items-center gap-1.5 bg-[#181B22] hover:bg-[#222732] text-white border border-white/10 px-3.5 py-2 rounded-xl text-xs font-bold transition-all shadow-sm"
           >
             <span>🍕</span>
             <span>Піца & Суші</span>
           </a>
           <a
-            href="/croissant/"
+            href="/urban-bites/cafe/"
             className="hidden sm:inline-flex items-center gap-1.5 bg-[#181B22] hover:bg-[#222732] text-white border border-white/10 px-3.5 py-2 rounded-xl text-xs font-bold transition-all shadow-sm"
           >
             <span>🥐</span>
@@ -166,14 +166,14 @@ export function GroupHeader({ onOpenCabinet, userProfile }: GroupHeaderProps) {
 
           <div className="grid grid-cols-2 gap-2 pb-3 border-b border-white/10">
             <a
-              href="/pizza/"
+              href="/urban-bites/restaurants/"
               className="flex items-center justify-center gap-1.5 bg-[#181B22] hover:bg-[#222732] border border-white/10 text-white py-2.5 px-3 rounded-xl text-xs font-bold shadow-xs transition-colors"
             >
               <span>🍕</span>
               <span>Pizza & Sushi</span>
             </a>
             <a
-              href="/croissant/"
+              href="/urban-bites/cafe/"
               className="flex items-center justify-center gap-1.5 bg-[#181B22] hover:bg-[#222732] border border-white/10 text-white py-2.5 px-3 rounded-xl text-xs font-bold shadow-xs transition-colors"
             >
               <span>🥐</span>

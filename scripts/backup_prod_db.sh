@@ -4,7 +4,7 @@
 # Зберігає стиснутий дамп у backups/ та видаляє копії, старіші за RETENTION_DAYS.
 #
 # Налаштування в cron (щоночі о 03:00):
-#   0 3 * * * /home/user/doma_app/scripts/backup_prod_db.sh >> /var/log/doma_backup.log 2>&1
+#   0 3 * * * /home/user/urban_app/scripts/backup_prod_db.sh >> /var/log/urban_backup.log 2>&1
 # ==============================================================================
 set -euo pipefail
 
@@ -24,10 +24,10 @@ if [ ! -f .env ]; then
     exit 1
 fi
 
-POSTGRES_USER=$(grep -E '^POSTGRES_USER=' .env | cut -d= -f2- | tr -d '"' | tr -d "'" || echo "doma_user")
-POSTGRES_USER=${POSTGRES_USER:-doma_user}
-POSTGRES_DB=$(grep -E '^POSTGRES_DB=' .env | cut -d= -f2- | tr -d '"' | tr -d "'" || echo "doma_app_db")
-POSTGRES_DB=${POSTGRES_DB:-doma_app_db}
+POSTGRES_USER=$(grep -E '^POSTGRES_USER=' .env | cut -d= -f2- | tr -d '"' | tr -d "'" || echo "urban_user")
+POSTGRES_USER=${POSTGRES_USER:-urban_user}
+POSTGRES_DB=$(grep -E '^POSTGRES_DB=' .env | cut -d= -f2- | tr -d '"' | tr -d "'" || echo "urban_app_db")
+POSTGRES_DB=${POSTGRES_DB:-urban_app_db}
 
 echo "$(date '+%Y-%m-%d %H:%M:%S') [INFO] Початок бекапу бази даних $POSTGRES_DB..."
 

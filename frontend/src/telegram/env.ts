@@ -109,7 +109,7 @@ export function getTelegramStartParam(): string | null {
   return null;
 }
 
-const CONSUMED_START_PARAM_KEY = "doma_consumed_start_param";
+const CONSUMED_START_PARAM_KEY = "urban_consumed_start_param";
 
 export function isStartParamConsumed(param?: string | null): boolean {
   if (typeof window === "undefined") return false;

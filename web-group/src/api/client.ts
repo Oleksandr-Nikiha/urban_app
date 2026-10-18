@@ -1,8 +1,9 @@
+const API_BASE = "/urban-bites/api";
 import type { DeliveryAddress } from "../types/catalog.ts";
 import type { OrderOut } from "../types/order.ts";
 
 export async function fetchDeliveryAddresses(city: string = "Київ"): Promise<DeliveryAddress[]> {
-  const res = await fetch(`/api/delivery/addresses?city=${encodeURIComponent(city)}`);
+  const res = await fetch(`${API_BASE}/delivery/addresses?city=${encodeURIComponent(city)}`);
   if (!res.ok) return [];
   return res.json();
 }
@@ -34,7 +35,7 @@ export async function fetchWebOrdersHistory(
       query = parts.join("&");
     }
 
-    const res = await fetch(`/api/orders/web/history?${query}`);
+    const res = await fetch(`${API_BASE}/orders/web/history?${query}`);
     if (!res.ok) return [];
     return res.json();
   } catch {
@@ -68,7 +69,7 @@ export interface UserOut {
 }
 
 export async function authTelegramWidget(user: TelegramWidgetUser): Promise<UserOut> {
-  const res = await fetch("/api/auth/telegram-widget", {
+  const res = await fetch(`${API_BASE}/auth/telegram-widget`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -103,7 +104,7 @@ export async function fetchWebProfile(params: {
   if (parts.length === 0) return null;
 
   try {
-    const res = await fetch(`/api/auth/web-profile?${parts.join("&")}`);
+    const res = await fetch(`${API_BASE}/auth/web-profile?${parts.join("&")}`);
     if (!res.ok) return null;
     return res.json();
   } catch {
@@ -112,7 +113,7 @@ export async function fetchWebProfile(params: {
 }
 
 export async function updateWebProfile(payload: WebProfileUpdatePayload): Promise<UserOut> {
-  const res = await fetch("/api/auth/web-profile", {
+  const res = await fetch(`${API_BASE}/auth/web-profile`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -131,7 +132,7 @@ export async function authPhoneLogin(payload: {
   full_name?: string;
   telegram_id?: number | null;
 }): Promise<UserOut> {
-  const res = await fetch("/api/auth/phone-login", {
+  const res = await fetch(`${API_BASE}/auth/phone-login`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",

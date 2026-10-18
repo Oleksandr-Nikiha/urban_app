@@ -1,6 +1,6 @@
 import { retrieveRawInitData } from "@telegram-apps/sdk-react";
 
-const BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "/api";
+const BASE_URL = import.meta.env.VITE_API_BASE_URL || "/urban-bites/api";
 
 /** Помилка з HTTP-статусом — щоб UI міг відрізнити 401 від 404 і мережевого збою. */
 export class ApiError extends Error {

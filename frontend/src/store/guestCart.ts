@@ -1,7 +1,7 @@
 import type { Cart, CartItem, CartItemOption, OptionSelection } from "@/api/types";
 
-const GUEST_CART_STORAGE_KEY = "doma_guest_cart_v1";
-export const GUEST_CART_EVENT = "doma_guest_cart_changed";
+const GUEST_CART_STORAGE_KEY = "urban_guest_cart_v1";
+export const GUEST_CART_EVENT = "urban_guest_cart_changed";
 
 export interface AddGuestCartPayload {
   product_id: number;

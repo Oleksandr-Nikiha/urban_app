@@ -35,15 +35,6 @@ def validate_init_data(
         for ft in fallback_tokens:
             if ft and ft not in candidates:
                 candidates.append(ft)
-    else:
-        # Резервні токени попередніх ботів мережі
-        default_fallbacks = [
-            "6305901946:AAHfIa7tjXsYKerM68XkP83RUVbzw5gj4CE",
-            "8946536442:AAGH7MAo3GJSQvHP_qH7z_KytWJ7Lg6kXUY",
-        ]
-        for ft in default_fallbacks:
-            if ft not in candidates:
-                candidates.append(ft)
 
     is_valid = False
     for token in candidates:

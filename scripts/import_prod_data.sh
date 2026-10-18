@@ -16,7 +16,7 @@ cd "$PROJECT_ROOT"
 
 if [ $# -lt 1 ]; then
     echo "Використання: $0 <шлях_до_архіву_міграції.tar.gz>"
-    echo "Приклад: $0 doma_prod_migration_20261011_120000.tar.gz"
+    echo "Приклад: $0 urban_prod_migration_20261011_120000.tar.gz"
     exit 1
 fi
 
@@ -33,10 +33,10 @@ if [ ! -f .env ]; then
 fi
 
 echo "=========================================================="
-echo "📥 Початок імпорту даних у прод-середовище doma_app"
+echo "📥 Початок імпорту даних у прод-середовище urban_app"
 echo "=========================================================="
 
-TEMP_EXTRACT_DIR=$(mktemp -d /tmp/doma_import_XXXXXX)
+TEMP_EXTRACT_DIR=$(mktemp -d /tmp/urban_import_XXXXXX)
 trap 'rm -rf "$TEMP_EXTRACT_DIR"' EXIT
 
 echo "→ 1/5 Розпакування міграційного бандлу..."
@@ -57,10 +57,10 @@ if [ ! -f "$SQL_FILE" ]; then
 fi
 
 # Зчитуємо параметри PostgreSQL з .env
-POSTGRES_USER=$(grep -E '^POSTGRES_USER=' .env | cut -d= -f2- | tr -d '"' | tr -d "'" || echo "doma_user")
-POSTGRES_USER=${POSTGRES_USER:-doma_user}
-POSTGRES_DB=$(grep -E '^POSTGRES_DB=' .env | cut -d= -f2- | tr -d '"' | tr -d "'" || echo "doma_app_db")
-POSTGRES_DB=${POSTGRES_DB:-doma_app_db}
+POSTGRES_USER=$(grep -E '^POSTGRES_USER=' .env | cut -d= -f2- | tr -d '"' | tr -d "'" || echo "urban_user")
+POSTGRES_USER=${POSTGRES_USER:-urban_user}
+POSTGRES_DB=$(grep -E '^POSTGRES_DB=' .env | cut -d= -f2- | tr -d '"' | tr -d "'" || echo "urban_app_db")
+POSTGRES_DB=${POSTGRES_DB:-urban_app_db}
 
 echo "→ 2/5 Запуск та перевірка контейнера PostgreSQL..."
 docker compose -f docker-compose.yml up -d postgres

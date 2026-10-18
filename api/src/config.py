@@ -12,10 +12,7 @@ class Settings(BaseSettings):
     database_url: str
     redis_url: str = "redis://redis:6379/0"
     bot_token: str
-    fallback_bot_tokens: str = (
-        "6305901946:AAHfIa7tjXsYKerM68XkP83RUVbzw5gj4CE,"
-        "8946536442:AAGH7MAo3GJSQvHP_qH7z_KytWJ7Lg6kXUY"
-    )
+    fallback_bot_tokens: str = ""
     bot_username: str = "urban_bites_tst_bot"
     mini_app_url: str = "https://nikiga-ax.duckdns.org"
     manager_chat_id: int | None = None

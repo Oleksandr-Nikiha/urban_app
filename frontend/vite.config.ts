@@ -9,6 +9,7 @@ export default defineConfig(({ mode }) => {
   const publicHost = env.VITE_PUBLIC_HOST || "";
 
   return {
+    base: "/urban-bites/app/",
     plugins: [react(), tailwindcss()],
 
     resolve: {

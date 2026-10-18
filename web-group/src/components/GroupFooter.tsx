@@ -35,7 +35,7 @@ export function GroupFooter() {
           {/* Заклад 1 */}
           <div className="md:col-span-4 space-y-3">
             <h4 className="font-display text-base font-bold text-white flex items-center gap-2">
-              <img src="/logo-pizza.svg" alt="" className="h-6 w-6 rounded-full inline-block" />
+              <img src={`${import.meta.env.BASE_URL}logo-pizza.svg`} alt="" className="h-6 w-6 rounded-full inline-block" />
               <span>Urban Pizza & Sushi</span>
             </h4>
             <ul className="space-y-2 text-xs sm:text-sm text-[#CBD5E1]">
@@ -49,7 +49,7 @@ export function GroupFooter() {
               </li>
               <li className="pt-1">
                 <a
-                  href="/pizza/"
+                  href="/urban-bites/restaurants/"
                   className="inline-flex items-center gap-1.5 text-xs text-amber-400 font-bold hover:underline"
                 >
                   Відкрити меню та замовити піцу →
@@ -61,7 +61,7 @@ export function GroupFooter() {
           {/* Заклад 2 */}
           <div className="md:col-span-4 space-y-3">
             <h4 className="font-display text-base font-bold text-white flex items-center gap-2">
-              <img src="/logo-bakery.svg" alt="" className="h-6 w-6 rounded-full inline-block" />
+              <img src={`${import.meta.env.BASE_URL}logo-bakery.svg`} alt="" className="h-6 w-6 rounded-full inline-block" />
               <span>Urban Bakery & Coffee</span>
             </h4>
             <ul className="space-y-2 text-xs sm:text-sm text-[#CBD5E1]">
@@ -75,7 +75,7 @@ export function GroupFooter() {
               </li>
               <li className="pt-1">
                 <a
-                  href="/croissant/"
+                  href="/urban-bites/cafe/"
                   className="inline-flex items-center gap-1.5 text-xs text-amber-400 font-bold hover:underline"
                 >
                   Відкрити меню та замовити круасани →

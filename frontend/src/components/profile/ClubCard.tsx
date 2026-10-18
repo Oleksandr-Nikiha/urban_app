@@ -21,7 +21,7 @@ export function ClubCard({ fullName, clientCode, bonusBalance }: ClubCardProps) 
           <div>
             <div className="flex items-center gap-2">
               <img
-                src="/logo-club.svg"
+                src={`${import.meta.env.BASE_URL}logo-club.svg`}
                 alt="Urban Club"
                 className="h-5 w-5 rounded-full object-cover shadow-xs"
               />

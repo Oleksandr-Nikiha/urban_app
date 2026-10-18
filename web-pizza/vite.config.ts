@@ -8,7 +8,7 @@ export default defineConfig(({ mode }) => {
   const apiTarget = env.VITE_API_TARGET || "http://api:8000";
 
   return {
-    base: "/pizza/",
+    base: "/urban-bites/restaurants/",
     plugins: [react(), tailwindcss()],
 
     resolve: {

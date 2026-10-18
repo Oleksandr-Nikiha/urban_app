@@ -46,41 +46,21 @@ function dropEmptyThemeVars(): void {
  */
 function applyUrbanBrandTheme(): void {
   const el = document.documentElement;
-  const isDark =
-    themeParams.isDark?.() ??
-    window.matchMedia?.("(prefers-color-scheme: dark)")?.matches ??
-    false;
-
-  if (isDark) {
-    el.style.setProperty("--tg-theme-bg-color", "#12161A");
-    el.style.setProperty("--tg-theme-secondary-bg-color", "#1A1F26");
-    el.style.setProperty("--tg-theme-text-color", "#F4F5F7");
-    el.style.setProperty("--tg-theme-hint-color", "#94A3B8");
-    el.style.setProperty("--tg-theme-link-color", "#E05338");
-    el.style.setProperty("--tg-theme-button-color", "#D34528");
-    el.style.setProperty("--tg-theme-button-text-color", "#FFFFFF");
-    el.style.setProperty("--app-surface", "#1A1F26");
-    el.style.setProperty("--app-surface-2", "#242B35");
-    el.style.setProperty("--app-surface-3", "#2E3744");
-    el.style.setProperty("--app-border", "#2E3744");
-    el.style.setProperty("--app-veil", "rgba(18, 22, 26, 0.88)");
-  } else {
-    el.style.setProperty("--tg-theme-bg-color", "#FDFBF7");
-    el.style.setProperty("--tg-theme-secondary-bg-color", "#F4F0E8");
-    el.style.setProperty("--tg-theme-text-color", "#18191A");
-    el.style.setProperty("--tg-theme-hint-color", "#6C727A");
-    el.style.setProperty("--tg-theme-link-color", "#D34528");
-    el.style.setProperty("--tg-theme-button-color", "#D34528");
-    el.style.setProperty("--tg-theme-button-text-color", "#FFFFFF");
-    el.style.setProperty("--app-surface", "#FFFFFF");
-    el.style.setProperty("--app-surface-2", "#F5F2EB");
-    el.style.setProperty("--app-surface-3", "#EAE5DB");
-    el.style.setProperty("--app-border", "#E5DFD5");
-    el.style.setProperty("--app-veil", "rgba(253, 251, 247, 0.88)");
-  }
+  el.style.setProperty("--tg-theme-bg-color", "#12161A");
+  el.style.setProperty("--tg-theme-secondary-bg-color", "#1A1F26");
+  el.style.setProperty("--tg-theme-text-color", "#F4F5F7");
+  el.style.setProperty("--tg-theme-hint-color", "#94A3B8");
+  el.style.setProperty("--tg-theme-link-color", "#E05338");
+  el.style.setProperty("--tg-theme-button-color", "#D34528");
+  el.style.setProperty("--tg-theme-button-text-color", "#FFFFFF");
+  el.style.setProperty("--app-surface", "#1A1F26");
+  el.style.setProperty("--app-surface-2", "#242B35");
+  el.style.setProperty("--app-surface-3", "#2E3744");
+  el.style.setProperty("--app-border", "#2E3744");
+  el.style.setProperty("--app-veil", "rgba(18, 22, 26, 0.88)");
 
   try {
-    const headerColor = isDark ? "#12161A" : "#FDFBF7";
+    const headerColor = "#12161A";
     if (miniApp.setHeaderColor.isAvailable()) {
       miniApp.setHeaderColor(headerColor as `#${string}`);
     }

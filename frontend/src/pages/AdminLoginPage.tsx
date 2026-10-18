@@ -227,7 +227,7 @@ export function AdminLoginPage() {
         {/* Логотип */}
         <div className="flex flex-col items-center text-center">
           <img
-            src="/logo.svg"
+            src={`${import.meta.env.BASE_URL}logo.svg`}
             alt="Urban Bites"
             className="h-16 w-16 rounded-2xl shadow-inner object-cover border border-amber-500/20"
           />

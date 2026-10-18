@@ -5,8 +5,8 @@ import type { OrderOut } from "../types/order.ts";
 import { OrderDetailsCard } from "./tracking/OrderDetailsCard.tsx";
 import { OrderTimeline } from "./tracking/OrderTimeline.tsx";
 
-export const LAST_ORDER_STORAGE_KEY = "doma_last_order_id";
-export const ORDERS_HISTORY_STORAGE_KEY = "doma_orders_history";
+export const LAST_ORDER_STORAGE_KEY = "urban_last_order_id";
+export const ORDERS_HISTORY_STORAGE_KEY = "urban_orders_history";
 
 interface OrderTrackingModalProps {
   orderId: number | null;

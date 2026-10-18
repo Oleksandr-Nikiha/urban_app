@@ -36,7 +36,7 @@ export function AdminSidebar({
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-2.5">
             <img
-              src="/logo.svg"
+              src={`${import.meta.env.BASE_URL}logo.svg`}
               alt="Urban Bites"
               className="h-10 w-10 rounded-xl shadow-xs object-cover border border-amber-500/20"
             />

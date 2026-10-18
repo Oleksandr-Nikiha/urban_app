@@ -38,10 +38,7 @@ def verify_admin_token(
             return None
 
         payload = f"{telegram_id}:{expires_at}"
-        keys = [secret_key] + (fallback_keys or [
-            "6305901946:AAHfIa7tjXsYKerM68XkP83RUVbzw5gj4CE",
-            "8946536442:AAGH7MAo3GJSQvHP_qH7z_KytWJ7Lg6kXUY",
-        ])
+        keys = [secret_key] + (fallback_keys or [])
 
         for key in keys:
             if not key:
@@ -95,10 +92,7 @@ def verify_user_token(
             return None
 
         payload = f"user:{user_id}:{expires_at}"
-        keys = [secret_key] + (fallback_keys or [
-            "6305901946:AAHfIa7tjXsYKerM68XkP83RUVbzw5gj4CE",
-            "8946536442:AAGH7MAo3GJSQvHP_qH7z_KytWJ7Lg6kXUY",
-        ])
+        keys = [secret_key] + (fallback_keys or [])
 
         for key in keys:
             if not key:

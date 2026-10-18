@@ -99,7 +99,7 @@ export function Footer() {
             <ul className="space-y-2 text-sm text-[#CBD5E1]">
               <li>
                 <a
-                  href="/croissant/"
+                  href="/urban-bites/cafe/"
                   className="hover:text-white transition-colors flex items-center gap-1.5"
                 >
                   <span>🥐</span>
@@ -108,7 +108,7 @@ export function Footer() {
               </li>
               <li>
                 <a
-                  href="/group/"
+                  href="/urban-bites/"
                   className="hover:text-white transition-colors flex items-center gap-1.5"
                 >
                   <span>🌐</span>
@@ -117,7 +117,7 @@ export function Footer() {
               </li>
               <li>
                 <a
-                  href="/group/#partnership"
+                  href="/urban-bites/#partnership"
                   className="hover:text-white transition-colors flex items-center gap-1.5"
                 >
                   <span>🤝</span>
@@ -137,7 +137,7 @@ export function Footer() {
               </li>
               <li className="pt-1">
                 <a
-                  href="/group/#offer"
+                  href="/urban-bites/#offer"
                   className="text-xs text-[#64748B] hover:text-[#94A3B8] underline"
                 >
                   Публічний договір (оферта)

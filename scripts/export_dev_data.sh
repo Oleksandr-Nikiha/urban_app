@@ -14,12 +14,12 @@ cd "$PROJECT_ROOT"
 
 TIMESTAMP="$(date +%Y%m%d_%H%M%S)"
 EXPORT_DIR="$PROJECT_ROOT/exports/migration_$TIMESTAMP"
-BUNDLE_FILE="$PROJECT_ROOT/exports/doma_prod_migration_$TIMESTAMP.tar.gz"
+BUNDLE_FILE="$PROJECT_ROOT/exports/urban_prod_migration_$TIMESTAMP.tar.gz"
 
 mkdir -p "$EXPORT_DIR"
 
 echo "=========================================================="
-echo "📦 Підготовка експорту даних doma_app ($TIMESTAMP)"
+echo "📦 Підготовка експорту даних urban_app ($TIMESTAMP)"
 echo "=========================================================="
 
 # 1. Читання DATABASE_URL
@@ -63,7 +63,7 @@ fi
 echo "→ 3/3 Створення маніфесту та єдиного бандлу міграції..."
 cat <<EOF > "$EXPORT_DIR/manifest.json"
 {
-  "project": "doma_app",
+  "project": "urban_app",
   "exported_at": "$(date -u +"%Y-%m-%dT%H:%M:%SZ")",
   "git_commit": "$(git rev-parse HEAD 2>/dev/null || echo "unknown")",
   "database_size": "$DUMP_SIZE",
@@ -80,7 +80,7 @@ echo "✅ Експорт завершено успішно!"
 echo "   Файл бандлу: $BUNDLE_FILE ($BUNDLE_SIZE)"
 echo ""
 echo "🚀 Інструкція з передачі на прод-сервер:"
-echo "   scp $BUNDLE_FILE user@your-prod-server:/home/user/doma_app/"
+echo "   scp $BUNDLE_FILE user@your-prod-server:/home/user/urban_app/"
 echo "   На прод-сервері виконайте:"
-echo "   ./scripts/import_prod_data.sh doma_prod_migration_$TIMESTAMP.tar.gz"
+echo "   ./scripts/import_prod_data.sh urban_prod_migration_$TIMESTAMP.tar.gz"
 echo "=========================================================="

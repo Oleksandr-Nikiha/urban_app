@@ -37,7 +37,7 @@ if (!root) throw new Error("Не знайдено #root у index.html");
 createRoot(root).render(
   <StrictMode>
     <QueryClientProvider client={queryClient}>
-      <BrowserRouter>
+      <BrowserRouter basename="/urban-bites/app">
         <App />
       </BrowserRouter>
     </QueryClientProvider>

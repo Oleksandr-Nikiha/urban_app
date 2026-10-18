@@ -1,6 +1,6 @@
-# Caddyfile для Mini App та веб-сайтів мережі Doma.
+# Caddyfile для Mini App та веб-сайтів мережі Urban Bites.
 #
-# Якщо задано змінну оточення APP_DOMAIN (наприклад, APP_DOMAIN=doma.example.com),
+# Якщо задано змінну оточення APP_DOMAIN (наприклад, APP_DOMAIN=urban.example.com),
 # Caddy автоматично отримує та оновлює TLS-сертифікат від Let's Encrypt / ZeroSSL,
 # слухає порти 80 та 443, і автоматично перенаправляє весь трафік з HTTP на HTTPS.
 # За відсутності APP_DOMAIN Caddy слухає порт 80 (HTTP) для локальної розробки.
@@ -57,7 +57,7 @@
 		}
 	}
 
-	# Публічний сайт пекарні Doma Croissants
+	# Публічний сайт пекарні Urban Bakery & Coffee
 	redir /croissant /croissant/
 	redir /croissants /croissant/
 	redir /croissants/* /croissant/
@@ -71,7 +71,7 @@
 		}
 	}
 
-	# Публічний сайт Doma Pizza & Sushi
+	# Публічний сайт Urban Pizza & Sushi
 	redir /pizza /pizza/
 	redir /pizza/* /pizza/
 	handle /pizza/* {
@@ -84,7 +84,7 @@
 		}
 	}
 
-	# Портал мережі DomaGroup та клубу лояльності DomaClub
+	# Портал мережі Urban Group та клубу лояльності Urban Club
 	redir /club /group/
 	redir /club/* /group/
 	redir /group /group/

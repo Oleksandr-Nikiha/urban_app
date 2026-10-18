@@ -62,7 +62,7 @@ export function CategoriesPage() {
             <SectionHeading>
               <span className="flex items-center gap-2">
                 <img
-                  src={isBakery ? "/logo-bakery.svg" : "/logo-pizza.svg"}
+                  src={isBakery ? `${import.meta.env.BASE_URL}logo-bakery.svg` : `${import.meta.env.BASE_URL}logo-pizza.svg`}
                   alt=""
                   className="h-6 w-6 rounded-full object-cover shadow-xs"
                 />

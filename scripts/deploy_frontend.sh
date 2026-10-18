@@ -9,13 +9,13 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-TARGET=/var/www/doma-app
+TARGET=/var/www/urban-bites/app
 COMPOSE="docker compose -f docker-compose.dev.yml"
 
 echo "→ збірка"
 # VITE_DEV_INIT_DATA навмисно порожній: у проді мок не потрібен,
 # а в бандл не має потрапити нічого схожого на облікові дані
-$COMPOSE exec -T -e VITE_DEV_INIT_DATA= frontend sh -c 'npm run build' >/dev/null
+$COMPOSE exec -T -e VITE_DEV_INIT_DATA= -e VITE_API_BASE_URL=/urban-bites/api frontend sh -c 'npm run build' >/dev/null
 
 echo "→ перевірка бандла на секрети"
 TOKEN=$(grep '^BOT_TOKEN=' .env | cut -d= -f2-)

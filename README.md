@@ -1,10 +1,10 @@
-# Doma Mini App
+# Urban Mini App
 
-**Telegram Mini App для замовлення їжі** з двох закладів у Вишгороді — Doma Pizza та Doma Croissants.
+**Telegram Mini App для замовлення їжі** з двох закладів у Вишгороді — Urban Pizza & Sushi та Urban Bakery & Coffee.
 Каталог, кошик і профіль живуть у веб-застосунку всередині Telegram; бот лишається точкою входу
 та каналом нотифікацій.
 
-[![CI](https://github.com/Oleksandr-Nikiha/doma_app/actions/workflows/ci.yml/badge.svg)](https://github.com/Oleksandr-Nikiha/doma_app/actions/workflows/ci.yml)
+[![CI](https://github.com/Oleksandr-Nikiha/urban_app/actions/workflows/ci.yml/badge.svg)](https://github.com/Oleksandr-Nikiha/urban_app/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Python 3.12](https://img.shields.io/badge/python-3.12-3776AB.svg?logo=python&logoColor=white)](https://www.python.org/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.115-009688.svg?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
@@ -30,7 +30,7 @@
   - Редагування імені, прізвища, основної та додаткової адреси доставки (`/profile`) з безпечною синхронізацією стану (`useEffect`)
   - Верифікація номера телефону через кнопку «Поділитися контактом» у боті з захистом від несанкціонованої зміни
 - **Каталог:**
-  - Дворівневі категорії обох закладів (Doma Pizza та Doma Croissants)
+  - Дворівневі категорії обох закладів (Urban Pizza та Urban Bakery)
   - Товари, розкладені по секціях із липкими заголовками
   - Картка товару з вибором розміру, варіантів цін і ваги
   - Опції «на вибір» з безкоштовною квотою (`free_count`): соуси, напої тощо
@@ -99,7 +99,7 @@
 **Екрани Mini App:** онбординг, категорії, список товарів із секціями, картка товару,
 кошик із розділенням закладу, чекаут, екран успішного замовлення, історія замовлень, профіль клієнта,
 адмін-панель (замовлення, клієнти, персонал, адреси, аналітика, розсилки), контакти.
-Нативна кнопка «Назад», тактильний відгук (Haptic), підтримка світлої й темної тем Telegram з адаптацією під фірмову палітру Doma (Croissants & Pizza) та шрифтами Playfair Display і Plus Jakarta Sans.
+Нативна кнопка «Назад», тактильний відгук (Haptic), підтримка світлої й темної тем Telegram з адаптацією під фірмову палітру Urban (Bakery & Pizza) та шрифтами Playfair Display і Plus Jakarta Sans.
 
 **Контроль доступу та безпека:**
 
@@ -173,8 +173,8 @@ scripts/    Локальні dev-утиліти (не відстежуються
 ### Налаштування
 
 ```bash
-git clone https://github.com/Oleksandr-Nikiha/doma_app.git
-cd doma_app
+git clone https://github.com/Oleksandr-Nikiha/urban_app.git
+cd urban_app
 
 cp .env.example .env
 $EDITOR .env          # DATABASE_URL, BOT_TOKEN, MINI_APP_URL
@@ -186,7 +186,7 @@ $EDITOR .env          # DATABASE_URL, BOT_TOKEN, MINI_APP_URL
 # Застосувати всі міграції (db/migrations/):
 for f in $(ls db/migrations/*.sql | sort); do psql "$DATABASE_URL" -f "$f"; done
 
-# Наповнити початковий каталог (Doma Pizza та Doma Croissants):
+# Наповнити початковий каталог (Urban Pizza та Urban Bakery):
 psql "$DATABASE_URL" -f db/seed/seed_catalog.sql
 ```
 
@@ -214,10 +214,10 @@ docker compose -f docker-compose.dev.yml restart frontend
 Змінна | Обов'язкова | Опис
 --- | --- | ---
 `APP_DOMAIN` | для проду | Публічний домен для Caddy (автоматичний SSL)
-`POSTGRES_DB` | для проду | Назва бази даних PostgreSQL (типово `doma_app_db`)
-`POSTGRES_USER` | для проду | Користувач PostgreSQL (типово `doma_user`)
+`POSTGRES_DB` | для проду | Назва бази даних PostgreSQL (типово `urban_app_db`)
+`POSTGRES_USER` | для проду | Користувач PostgreSQL (типово `urban_user`)
 `POSTGRES_PASSWORD` | для проду | Пароль до бази даних PostgreSQL
-`DATABASE_URL` | так | DSN PostgreSQL, напр. `postgresql://user:pass@host:5432/doma_app_db`
+`DATABASE_URL` | так | DSN PostgreSQL, напр. `postgresql://user:pass@host:5432/urban_app_db`
 `BOT_TOKEN` | так | Токен від BotFather; ним же валідується `initData`
 `MINI_APP_URL` | так | HTTPS-URL Mini App для кнопки в боті
 `MANAGER_CHAT_ID` | ні | ID чату/групи менеджерів у Telegram для отримання карток нових замовлень та модерації
@@ -252,13 +252,13 @@ docker compose -f docker-compose.dev.yml restart frontend
 
    ```bash
    ./scripts/export_dev_data.sh
-   # Створює архів exports/doma_prod_migration_YYYYMMDD_HHMMSS.tar.gz (дамп БД + фотографії)
+   # Створює архів exports/urban_prod_migration_YYYYMMDD_HHMMSS.tar.gz (дамп БД + фотографії)
    ```
 
 2. **Передача на прод-сервер:**
 
    ```bash
-   scp exports/doma_prod_migration_*.tar.gz user@your-prod-server:/home/user/doma_app/
+   scp exports/urban_prod_migration_*.tar.gz user@your-prod-server:/home/user/urban_app/
    ```
 
 3. **Ініціалізація та запуск на прод-сервері:**
@@ -268,7 +268,7 @@ docker compose -f docker-compose.dev.yml restart frontend
    # Заповніть реальні значення APP_DOMAIN, POSTGRES_PASSWORD, BOT_TOKEN, MANAGER_CHAT_ID
 
    # Імпорт дампу БД та синхронізація медіа-файлів:
-   ./scripts/import_prod_data.sh doma_prod_migration_*.tar.gz
+   ./scripts/import_prod_data.sh urban_prod_migration_*.tar.gz
 
    # Призначення вашого акаунта адміністратором (для входу в /admin):
    python3 scripts/create_admin.py <TELEGRAM_ID> "Ім'я"
@@ -281,7 +281,7 @@ docker compose -f docker-compose.dev.yml restart frontend
 
    ```bash
    # Додати в crontab (crontab -e):
-   0 3 * * * /home/user/doma_app/scripts/backup_prod_db.sh >> /var/log/doma_backup.log 2>&1
+   0 3 * * * /home/user/urban_app/scripts/backup_prod_db.sh >> /var/log/urban_backup.log 2>&1
    ```
 
 ---
@@ -428,14 +428,14 @@ handle /api/* {
     reverse_proxy 127.0.0.1:8010
 }
 handle {
-    root * /var/www/doma-app
+    root * /var/www/urban-app
     try_files {path} /index.html
     file_server
 }
 ```
 
 Статику можна зібрати локально (`npm --prefix frontend run build`) і розкласти
-у директорію веб-сервера (наприклад, `/var/www/doma-app`).
+у директорію веб-сервера (наприклад, `/var/www/urban-app`).
 
 **Dev-сервер Vite назовні виставляти не можна.** Він віддає вихідні тексти
 з уже підставленими значеннями `VITE_*`-змінних, а серед них `VITE_DEV_INIT_DATA` —

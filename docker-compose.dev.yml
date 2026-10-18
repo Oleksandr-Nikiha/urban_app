@@ -91,7 +91,7 @@ services:
     # та DATABASE_URL. Vite вшиває у бандл лише VITE_*, але тримати секрети
     # в оточенні фронтенду немає причин. Перелічуємо явно тільки потрібне.
     environment:
-      VITE_API_BASE_URL: ${VITE_API_BASE_URL:-/api}
+      VITE_API_BASE_URL: ${VITE_API_BASE_URL:-/urban-bites/api}
       VITE_DEV_INIT_DATA: ${VITE_DEV_INIT_DATA:-}
       VITE_PUBLIC_HOST: ${VITE_PUBLIC_HOST:-}
     ports:
@@ -123,7 +123,7 @@ services:
       dockerfile: Dockerfile.dev
     restart: unless-stopped
     environment:
-      VITE_API_BASE_URL: ${VITE_API_BASE_URL:-/api}
+      VITE_API_BASE_URL: ${VITE_API_BASE_URL:-/urban-bites/api}
       VITE_TELEGRAM_BOT_USERNAME: ${BOT_USERNAME:-urban_bites_tst_bot}
     ports:
       - "5174:5174"
@@ -147,7 +147,7 @@ services:
       dockerfile: Dockerfile.dev
     restart: unless-stopped
     environment:
-      VITE_API_BASE_URL: ${VITE_API_BASE_URL:-/api}
+      VITE_API_BASE_URL: ${VITE_API_BASE_URL:-/urban-bites/api}
       VITE_TELEGRAM_BOT_USERNAME: ${BOT_USERNAME:-urban_bites_tst_bot}
     ports:
       - "5175:5175"
@@ -171,7 +171,7 @@ services:
       dockerfile: Dockerfile.dev
     restart: unless-stopped
     environment:
-      VITE_API_BASE_URL: ${VITE_API_BASE_URL:-/api}
+      VITE_API_BASE_URL: ${VITE_API_BASE_URL:-/urban-bites/api}
       VITE_TELEGRAM_BOT_USERNAME: ${BOT_USERNAME:-urban_bites_tst_bot}
     ports:
       - "5176:5176"

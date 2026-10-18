@@ -15,9 +15,9 @@ services:
     restart: unless-stopped
     env_file: .env
     environment:
-      POSTGRES_DB: ${POSTGRES_DB:-doma_app_db}
-      POSTGRES_USER: ${POSTGRES_USER:-doma_user}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-doma_secure_password}
+      POSTGRES_DB: ${POSTGRES_DB:-urban_app_db}
+      POSTGRES_USER: ${POSTGRES_USER:-urban_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-urban_secure_password}
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -64,7 +64,7 @@ services:
     restart: "no"
     env_file: .env
     environment:
-      DATABASE_URL: ${DATABASE_URL:-postgresql://${POSTGRES_USER:-doma_user}:${POSTGRES_PASSWORD:-doma_secure_password}@postgres:5432/${POSTGRES_DB:-doma_app_db}}
+      DATABASE_URL: ${DATABASE_URL:-postgresql://${POSTGRES_USER:-urban_user}:${POSTGRES_PASSWORD:-urban_secure_password}@postgres:5432/${POSTGRES_DB:-urban_app_db}}
     depends_on:
       postgres:
         condition: service_healthy
@@ -86,7 +86,7 @@ services:
     restart: unless-stopped
     env_file: .env
     environment:
-      DATABASE_URL: ${DATABASE_URL:-postgresql://${POSTGRES_USER:-doma_user}:${POSTGRES_PASSWORD:-doma_secure_password}@postgres:5432/${POSTGRES_DB:-doma_app_db}}
+      DATABASE_URL: ${DATABASE_URL:-postgresql://${POSTGRES_USER:-urban_user}:${POSTGRES_PASSWORD:-urban_secure_password}@postgres:5432/${POSTGRES_DB:-urban_app_db}}
       REDIS_URL: redis://redis:6379/0
       API_DEBUG: ${API_DEBUG:-false}
     depends_on:
@@ -123,7 +123,7 @@ services:
     restart: unless-stopped
     env_file: .env
     environment:
-      DATABASE_URL: ${DATABASE_URL:-postgresql://${POSTGRES_USER:-doma_user}:${POSTGRES_PASSWORD:-doma_secure_password}@postgres:5432/${POSTGRES_DB:-doma_app_db}}
+      DATABASE_URL: ${DATABASE_URL:-postgresql://${POSTGRES_USER:-urban_user}:${POSTGRES_PASSWORD:-urban_secure_password}@postgres:5432/${POSTGRES_DB:-urban_app_db}}
     depends_on:
       postgres:
         condition: service_healthy

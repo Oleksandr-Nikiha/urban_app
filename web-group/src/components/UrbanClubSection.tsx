@@ -17,7 +17,7 @@ export function UrbanClubSection({ onOpenCabinet }: UrbanClubSectionProps) {
         {/* Заголовок */}
         <div className="text-center max-w-3xl mx-auto space-y-4 mb-12 sm:mb-16">
           <span className="inline-flex items-center gap-2 bg-amber-500/10 text-amber-400 border border-amber-500/30 px-3.5 py-1 rounded-full text-xs font-bold uppercase tracking-wider">
-            <img src="/logo-club.svg" alt="" className="h-4 w-4 rounded-full inline-block" />
+            <img src={`${import.meta.env.BASE_URL}logo-club.svg`} alt="" className="h-4 w-4 rounded-full inline-block" />
             <span>Система лояльності Urban Bites</span>
           </span>
           <h2 className="font-display text-3xl sm:text-4xl lg:text-5xl font-bold text-white">

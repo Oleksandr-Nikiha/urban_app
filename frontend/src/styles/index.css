@@ -7,48 +7,31 @@
 /* Колірна палітра екосистеми Urban Bites
    Сучасний урбаністичний стиль, теплий теракот, графіт, свіжа випічка та преміальна кава */
 :root {
-  color-scheme: light;
-  --tg-theme-bg-color: #FDFBF7;
-  --tg-theme-secondary-bg-color: #F4F0E8;
-  --tg-theme-text-color: #18191A;
-  --tg-theme-hint-color: #6C727A;
-  --tg-theme-link-color: #D34528;
+  color-scheme: dark;
+  --tg-theme-bg-color: #12161A;
+  --tg-theme-secondary-bg-color: #1A1F26;
+  --tg-theme-text-color: #F4F5F7;
+  --tg-theme-hint-color: #94A3B8;
+  --tg-theme-link-color: #E05338;
   --tg-theme-button-color: #D34528;
   --tg-theme-button-text-color: #FFFFFF;
 
-  --app-surface: #FFFFFF;
-  --app-surface-2: #F5F2EB;
-  --app-surface-3: #EAE5DB;
-  --app-border: #E5DFD5;
-  --app-border-focus: #D34528;
+  --app-surface: #1A1F26;
+  --app-surface-2: #242B35;
+  --app-surface-3: #2E3744;
+  --app-border: #2E3744;
+  --app-border-focus: #E05338;
   --app-skeleton: color-mix(in srgb, currentColor 8%, transparent);
-  --app-veil: color-mix(in srgb, #FDFBF7 88%, transparent);
+  --app-veil: color-mix(in srgb, #12161A 88%, transparent);
   --app-tint: color-mix(in srgb, var(--tg-theme-button-color) 12%, transparent);
   --app-tint-hover: color-mix(in srgb, var(--tg-theme-button-color) 20%, transparent);
-  --app-shadow: 0 2px 10px -2px rgba(24, 25, 26, 0.07), 0 8px 24px -6px rgba(24, 25, 26, 0.11);
-  --app-shadow-sm: 0 1px 4px rgba(24, 25, 26, 0.05);
+  --app-shadow: 0 2px 10px -2px rgba(0, 0, 0, 0.4), 0 8px 24px -6px rgba(0, 0, 0, 0.5);
+  --app-shadow-sm: 0 1px 4px rgba(0, 0, 0, 0.3);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    color-scheme: dark;
-    --tg-theme-bg-color: #12161A;
-    --tg-theme-secondary-bg-color: #1A1F26;
-    --tg-theme-text-color: #F4F5F7;
-    --tg-theme-hint-color: #94A3B8;
-    --tg-theme-link-color: #E05338;
-    --tg-theme-button-color: #D34528;
-    --tg-theme-button-text-color: #FFFFFF;
-
-    --app-surface: #1A1F26;
-    --app-surface-2: #242B35;
-    --app-surface-3: #2E3744;
-    --app-border: #2E3744;
-    --app-border-focus: #E05338;
-    --app-veil: color-mix(in srgb, #12161A 88%, transparent);
-    --app-shadow: 0 2px 10px -2px rgba(0, 0, 0, 0.4), 0 8px 24px -6px rgba(0, 0, 0, 0.5);
-    --app-shadow-sm: 0 1px 4px rgba(0, 0, 0, 0.3);
-  }
+html {
+  background-color: #12161A;
+  color-scheme: dark;
 }
 
 

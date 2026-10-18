@@ -1,3 +1,4 @@
+const API_BASE = "/urban-bites/api";
 import type {
   Category,
   DeliveryAddress,
@@ -15,43 +16,45 @@ export const DEFAULT_PRODUCT_IMAGE =
 export function getImageUrl(path: string | null | undefined): string {
   if (!path) return DEFAULT_PRODUCT_IMAGE;
   if (path.startsWith("http://") || path.startsWith("https://")) return path;
+  if (path.startsWith("/api/")) return path.replace(/^\/api/, API_BASE);
+  if (path.startsWith("/uploads/")) return `${API_BASE}${path}`;
   if (path.startsWith("/")) return path;
   return `/${path}`;
 }
 
 export async function fetchCategories(locationId: number = PIZZA_LOCATION_ID): Promise<Category[]> {
-  const res = await fetch(`/api/categories?location_id=${locationId}`);
+  const res = await fetch(`${API_BASE}/categories?location_id=${locationId}`);
   if (!res.ok) throw new Error("Не вдалося завантажити категорії");
   return res.json();
 }
 
 export async function fetchProductsByCategory(categoryId: number): Promise<ProductListItem[]> {
-  const res = await fetch(`/api/categories/${categoryId}/products`);
+  const res = await fetch(`${API_BASE}/categories/${categoryId}/products`);
   if (!res.ok) throw new Error("Не вдалося завантажити страви категорії");
   return res.json();
 }
 
 export async function fetchProductDetail(productId: number): Promise<ProductDetail> {
-  const res = await fetch(`/api/products/${productId}`);
+  const res = await fetch(`${API_BASE}/products/${productId}`);
   if (!res.ok) throw new Error("Не вдалося завантажити інформацію про страву");
   return res.json();
 }
 
 export async function fetchLocationInfo(locationId: number = PIZZA_LOCATION_ID): Promise<LocationInfo | null> {
-  const res = await fetch("/api/locations");
+  const res = await fetch(`${API_BASE}/locations`);
   if (!res.ok) throw new Error("Не вдалося завантажити інформацію про заклад");
   const list: LocationInfo[] = await res.json();
   return list.find((loc) => loc.id === locationId) || list[0] || null;
 }
 
 export async function fetchDeliveryAddresses(city: string = "Київ"): Promise<DeliveryAddress[]> {
-  const res = await fetch(`/api/delivery/addresses?city=${encodeURIComponent(city)}`);
+  const res = await fetch(`${API_BASE}/delivery/addresses?city=${encodeURIComponent(city)}`);
   if (!res.ok) return [];
   return res.json();
 }
 
 export async function submitWebOrder(payload: WebOrderCreatePayload): Promise<OrderOut> {
-  const res = await fetch("/api/orders/web", {
+  const res = await fetch(`${API_BASE}/orders/web`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -68,7 +71,7 @@ export async function submitWebOrder(payload: WebOrderCreatePayload): Promise<Or
 }
 
 export async function fetchWebOrder(orderId: number): Promise<OrderOut> {
-  const res = await fetch(`/api/orders/web/${orderId}`);
+  const res = await fetch(`${API_BASE}/orders/web/${orderId}`);
   if (!res.ok) throw new Error("Замовлення не знайдено");
   return res.json();
 }
@@ -89,7 +92,7 @@ export async function fetchWebOrdersHistory(
       query = parts.join("&");
     }
 
-    const res = await fetch(`/api/orders/web/history?${query}`);
+    const res = await fetch(`${API_BASE}/orders/web/history?${query}`);
     if (!res.ok) return [];
     return res.json();
   } catch {
@@ -123,7 +126,7 @@ export interface UserOut {
 }
 
 export async function authTelegramWidget(user: TelegramWidgetUser): Promise<UserOut> {
-  const res = await fetch("/api/auth/telegram-widget", {
+  const res = await fetch(`${API_BASE}/auth/telegram-widget`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -156,7 +159,7 @@ export async function fetchWebProfile(params: {
   if (parts.length === 0) return null;
 
   try {
-    const res = await fetch(`/api/auth/web-profile?${parts.join("&")}`);
+    const res = await fetch(`${API_BASE}/auth/web-profile?${parts.join("&")}`);
     if (!res.ok) return null;
     return res.json();
   } catch {
@@ -165,7 +168,7 @@ export async function fetchWebProfile(params: {
 }
 
 export async function updateWebProfile(payload: WebProfileUpdatePayload): Promise<UserOut> {
-  const res = await fetch("/api/auth/web-profile", {
+  const res = await fetch(`${API_BASE}/auth/web-profile`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -184,7 +187,7 @@ export async function authPhoneLogin(payload: {
   full_name?: string;
   telegram_id?: number | null;
 }): Promise<UserOut> {
-  const res = await fetch("/api/auth/phone-login", {
+  const res = await fetch(`${API_BASE}/auth/phone-login`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",

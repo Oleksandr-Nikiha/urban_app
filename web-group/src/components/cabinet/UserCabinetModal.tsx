@@ -24,8 +24,8 @@ import { PhoneAuthView } from "./PhoneAuthView.tsx";
 import { ProfileSettingsTab } from "./ProfileSettingsTab.tsx";
 import type { TelegramUser } from "./TelegramLoginWidget.tsx";
 
-const CUSTOMER_STORAGE_KEY = "doma_customer_info_v1";
-const ORDERS_HISTORY_STORAGE_KEY = "doma_orders_history_ids_v1";
+const CUSTOMER_STORAGE_KEY = "urban_customer_info_v1";
+const ORDERS_HISTORY_STORAGE_KEY = "urban_orders_history_ids_v1";
 
 interface UserCabinetModalProps {
   isOpen: boolean;

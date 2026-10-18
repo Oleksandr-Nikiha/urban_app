@@ -94,7 +94,7 @@ export function ContactsPage() {
               <div className="flex items-start justify-between gap-2">
                 <div className="flex items-center gap-3">
                   <img
-                    src={isBakery ? "/logo-bakery.svg" : "/logo-pizza.svg"}
+                    src={isBakery ? `${import.meta.env.BASE_URL}logo-bakery.svg` : `${import.meta.env.BASE_URL}logo-pizza.svg`}
                     alt={loc.name}
                     className="h-10 w-10 rounded-full object-cover shadow-sm shrink-0"
                   />

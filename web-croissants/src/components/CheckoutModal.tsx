@@ -21,7 +21,7 @@ interface CheckoutModalProps {
   onAuthSuccess?: (profile: UserProfile) => void;
 }
 
-export const CUSTOMER_STORAGE_KEY = "doma_customer_details_v1";
+export const CUSTOMER_STORAGE_KEY = "urban_customer_details_v1";
 
 export interface SavedCustomer {
   name: string;
