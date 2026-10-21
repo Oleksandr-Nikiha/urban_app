@@ -72,6 +72,9 @@ function applyUrbanBrandTheme(): void {
 
 
 export function initSdk(): void {
+  // Негайно застосовуємо фірмову колірну схему Urban Bites, запобігаючи асинхронній гонці
+  applyUrbanBrandTheme();
+
   if (ready) return;
 
   // Сповіщаємо Telegram (як нативний клієнт, так і iframe у web.telegram.org)
@@ -99,16 +102,32 @@ export function initSdk(): void {
         miniApp.ready();
       }
     } catch { /* ignore */ }
-    // Прив'язка теми та накладання фірмових кольорів Urban Bites
+    // Безпечна прив'язка теми без гонки станів: перевірка наявності методів та асинхронний fallback
     try {
-      themeParams.mountSync();
-      themeParams.bindCssVars();
+      if (themeParams.mountSync.isAvailable()) {
+        themeParams.mountSync();
+      } else if (themeParams.mount.isAvailable()) {
+        void themeParams.mount().then(() => {
+          if (themeParams.bindCssVars.isAvailable() && !themeParams.isCssVarsBound?.()) {
+            themeParams.bindCssVars();
+          }
+          dropEmptyThemeVars();
+          applyUrbanBrandTheme();
+        }).catch(() => {});
+      }
+
+      if (themeParams.bindCssVars.isAvailable() && !themeParams.isCssVarsBound?.()) {
+        themeParams.bindCssVars();
+      }
       dropEmptyThemeVars();
       applyUrbanBrandTheme();
-      themeParams.state.sub(() => {
-        dropEmptyThemeVars();
-        applyUrbanBrandTheme();
-      });
+
+      if (themeParams.state?.sub) {
+        themeParams.state.sub(() => {
+          dropEmptyThemeVars();
+          applyUrbanBrandTheme();
+        });
+      }
     } catch {
       applyUrbanBrandTheme();
     }
