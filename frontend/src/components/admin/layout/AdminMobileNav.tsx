@@ -64,7 +64,7 @@ export function AdminMobileNav({
               <span>До меню</span>
             </button>
           )}
-          <h1 className="text-xl font-bold tracking-tight truncate">Адмін-панель</h1>
+          <h1 className="text-base sm:text-xl font-bold tracking-tight truncate">Адмін-панель</h1>
         </div>
         <div className="flex items-center gap-1.5 shrink-0">
           <div className="flex flex-col items-end gap-0.5 text-right">
@@ -151,20 +151,20 @@ export function AdminMobileNav({
       {/* 2. Підвкладки розділу "Заклад" */}
       {activeSection === "operations" && (
         <div
-          className="mt-2 flex rounded-xl p-1 text-xs font-medium overflow-x-auto no-scrollbar gap-1"
+          className="mt-2 flex rounded-xl p-1 text-xs font-medium overflow-x-auto no-scrollbar gap-1 overscroll-contain touch-pan-x"
           style={{ background: "var(--app-surface-2)" }}
         >
           {[
-            { tab: "orders" as AdminTab, label: "📦 Замовлення", minW: "90px" },
-            { tab: "catalog" as AdminTab, label: "🍕 Меню", minW: "70px" },
-            { tab: "options" as AdminTab, label: "🥫 Опції", minW: "75px" },
-            { tab: "stoplist" as AdminTab, label: "⛔ Стоп", minW: "70px" },
-            { tab: "delivery" as AdminTab, label: "🛵 Доставка", minW: "80px" },
+            { tab: "orders" as AdminTab, label: "📦 Замовлення" },
+            { tab: "catalog" as AdminTab, label: "🍕 Меню" },
+            { tab: "options" as AdminTab, label: "🥫 Опції" },
+            { tab: "stoplist" as AdminTab, label: "⛔ Стоп" },
+            { tab: "delivery" as AdminTab, label: "🛵 Доставка" },
           ].map((item) => (
             <button
               key={item.tab}
               onClick={() => handleSelectTab(item.tab, "operations")}
-              className={`app-press flex-1 min-w-[${item.minW}] rounded-lg py-2 text-center transition-all ${
+              className={`app-press flex-1 shrink-0 whitespace-nowrap rounded-lg px-2.5 py-2 text-center transition-all ${
                 activeTab === item.tab ? "shadow-sm font-bold" : "opacity-70"
               }`}
               style={
