@@ -47,16 +47,6 @@ export function useRegister() {
         setUserToken(user.auth_token);
       }
       qc.setQueryData(keys.me, user);
-    },
-  });
-}
-
-export function useBonusHistory() {
-  return useQuery<BonusTransaction[]>({ 
-    queryKey: ["me", "bonuses", "history"],
-    queryFn: () => api.get<BonusTransaction[]>("/me/bonuses/history"),
-  });
-}e, user);
       void qc.invalidateQueries({ queryKey: keys.cart });
     },
   });
