@@ -558,6 +558,7 @@ async def list_pos_orders(
             SELECT o.id, o.status, o.fulfillment_type, o.table_number, o.staff_name,
                    o.payment_method, o.is_paid, o.total_price::float AS total_price,
                    o.bonus_spent, o.comment, o.contact_phone, o.contact_name,
+                   o.cancel_reason,
                    to_char(o.created_at, 'HH24:MI') AS time_str,
                    COALESCE(
                        (SELECT string_agg(oi.product_name || ' ×' || oi.qty, ', ')
@@ -970,7 +971,7 @@ async def remove_item_from_pos_order(
             # Перераховуємо підсумок чека
             new_total = await conn.fetchval(
                 """
-                SELECT COALESCE(SUM(subtotal), 0)::float
+                SELECT COALESCE(SUM(oi.subtotal), 0)::float
                 FROM order_items oi
                 JOIN order_groups og ON og.id = oi.order_group_id
                 WHERE og.order_id = $1
@@ -1038,7 +1039,7 @@ async def update_item_qty_in_pos_order(
 
             new_total = await conn.fetchval(
                 """
-                SELECT COALESCE(SUM(subtotal), 0)::float
+                SELECT COALESCE(SUM(oi.subtotal), 0)::float
                 FROM order_items oi
                 JOIN order_groups og ON og.id = oi.order_group_id
                 WHERE og.order_id = $1
