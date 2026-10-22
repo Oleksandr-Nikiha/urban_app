@@ -233,6 +233,32 @@ class OrderService:
 
         total_order_price = round(total_order_price, 2)
 
+        # 4.9 Валідація та списання бонусів URBAN CLUB
+        bonus_spent = payload.bonus_spent
+        if bonus_spent > 0:
+            user_db = await conn.fetchrow(
+                "SELECT id, bonus_balance FROM users WHERE telegram_id = $1 FOR UPDATE",
+                telegram_id,
+            )
+            user_balance = int(user_db["bonus_balance"] or 0) if user_db else 0
+            if bonus_spent > user_balance:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"Недостатньо бонусів. Доступно: {user_balance}",
+                )
+            if bonus_spent > total_order_price:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"Сума бонусів ({bonus_spent}) не може перевищувати вартість замовлення ({total_order_price:.2f} ₴)",
+                )
+            total_order_price = round(total_order_price - bonus_spent, 2)
+            new_user_balance = user_balance - bonus_spent
+            await conn.execute(
+                "UPDATE users SET bonus_balance = $1 WHERE id = $2",
+                new_user_balance,
+                user_db["id"],
+            )
+
         # 5.1 Захист від дублювання замовлень (SEC-2)
         recent_order_id = await conn.fetchval(
             """
@@ -266,9 +292,9 @@ class OrderService:
             INSERT INTO orders (
                 telegram_id, status, fulfillment_type, delivery_address,
                 contact_name, contact_phone, payment_method, scheduled_time,
-                comment, total_price
+                comment, total_price, bonus_spent
             )
-            VALUES ($1, 'pending_moderation', $2, $3, $4, $5, $6, $7, $8, $9)
+            VALUES ($1, 'pending_moderation', $2, $3, $4, $5, $6, $7, $8, $9, $10)
             RETURNING id, created_at
         """
         order_row = await conn.fetchrow(
@@ -282,7 +308,20 @@ class OrderService:
             clean_scheduled_time,
             payload.comment.strip() if payload.comment else None,
             total_order_price,
+            bonus_spent,
         )
+        if bonus_spent > 0 and user_db:
+            await conn.execute(
+                """
+                INSERT INTO bonus_ledger (user_id, order_id, amount, balance_after, type, description)
+                VALUES ($1, $2, $3, $4, 'spend', $5)
+                """,
+                user_db["id"],
+                order_row["id"],
+                -bonus_spent,
+                new_user_balance,
+                f"Списання бонусів на замовлення #{order_row['id']}",
+            )
         order_id = order_row["id"]
         created_at = order_row["created_at"]
 
@@ -401,6 +440,7 @@ class OrderService:
             scheduled_time=clean_scheduled_time,
             comment=payload.comment,
             total_price=total_order_price,
+            bonus_spent=bonus_spent,
             created_at=created_at,
             groups=[
                 OrderGroupOut(

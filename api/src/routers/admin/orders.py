@@ -7,6 +7,7 @@ from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query
 from src.auth.deps import get_current_staff
 from src.config import get_settings
 from src.db.connection import get_pool
+from src.services.bonus_service import accrue_cashback_for_order
 from src.schemas.admin import (
     AdminOrderDetailOut,
     AdminOrderGroupOut,
@@ -366,6 +367,7 @@ async def update_admin_order(
                     f"Кур'єр уже прямує за адресою: <code>{esc_addr}</code> 💨"
                 )
             elif new_status == "completed":
+                await accrue_cashback_for_order(conn, order_id)
                 client_text = (
                     f"🏁 <b>Замовлення #{order_id} виконано!</b>\n\n"
                     f"Смачного! Дякуємо, що обираєте Urban Bites. Будемо раді бачити вас знову! ❤️"

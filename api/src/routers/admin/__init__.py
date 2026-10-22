@@ -1,6 +1,7 @@
 from fastapi import APIRouter
 
 from .analytics import router as analytics_router
+from .bonuses import router as bonuses_router
 from .broadcasts import router as broadcasts_router
 from .categories import router as categories_router
 from .delivery_addresses import router as delivery_addresses_router
@@ -28,4 +29,5 @@ router.include_router(users_router)
 router.include_router(orders_router)
 router.include_router(delivery_addresses_router)
 router.include_router(analytics_router)
+router.include_router(bonuses_router)
 router.include_router(broadcasts_router)

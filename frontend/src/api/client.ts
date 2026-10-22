@@ -50,6 +50,64 @@ export function getRawInitData(): string | null {
 
 export const USER_TOKEN_KEY = "urban_user_token";
 
+async function apiRequest<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
+  const headers = new Headers(options.headers || {});
+  const initData = getRawInitData();
+  if (initData) {
+    headers.set("Authorization", `tma ${initData}`);
+  }
+  if (typeof window !== "undefined") {
+    const token = localStorage.getItem(USER_TOKEN_KEY);
+    if (token && !headers.has("Authorization")) {
+      headers.set("Authorization", `Bearer ${token}`);
+    }
+  }
+  headers.set("Content-Type", "application/json");
+
+  const response = await fetch(`${BASE_URL}${endpoint}`, {
+    ...options,
+    headers,
+  });
+
+  if (!response.ok) {
+    let detail = "Помилка запиту";
+    try {
+      const errJson = await response.json();
+      detail = errJson.detail || JSON.stringify(errJson);
+    } catch {
+      detail = response.statusText || detail;
+    }
+    throw new ApiError(response.status, detail);
+  }
+
+  return response.json() as Promise<T>;
+}
+
+export const bonusApi = {
+  getMyBonuses: () => apiRequest<import("./types").BonusMeResponse>("/bonuses/me"),
+  getHistory: (page = 1, limit = 20) =>
+    apiRequest<import("./types").BonusHistoryResponse>(`/bonuses/history?page=${page}&limit=${limit}`),
+  createOrder: (payload: import("./types").OrderCreateRequest) =>
+    apiRequest<import("./types").OrderCreateResponse>("/orders", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }),
+  getAdminAnalytics: () =>
+    apiRequest<import("./types").AdminBonusAnalytics>("/admin/bonuses/analytics"),
+  getAdminTransactions: (offset = 0, limit = 50) =>
+    apiRequest<import("./types").AdminBonusTransactionsResponse>(
+      `/admin/bonuses/transactions?offset=${offset}&limit=${limit}`
+    ),
+  adjustUserBonus: (userId: number, payload: import("./types").AdminAdjustBonusRequest) =>
+    apiRequest<import("./types").AdminAdjustBonusResponse>(
+      `/admin/users/${userId}/bonuses/adjust`,
+      {
+        method: "POST",
+        body: JSON.stringify(payload),
+      }
+    ),
+};urban_user_token";
+
 export function getUserToken(): string | null {
   if (typeof window === "undefined") return null;
   return localStorage.getItem(USER_TOKEN_KEY);
