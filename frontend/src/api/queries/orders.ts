@@ -52,6 +52,16 @@ export function useOrders() {
     queryKey: keys.orders,
     queryFn: () => api.get<Order[]>("/orders"),
     enabled: hasTelegramAuth(),
+    refetchInterval: (query) => {
+      const orders = query.state.data;
+      if (!orders || orders.length === 0) return 10000;
+      const hasActive = orders.some(
+        (o) => !["completed", "delivered", "rejected", "cancelled"].includes(o.status),
+      );
+      // Лайв-режим: при активних замовленнях оновлюємо що 3 секунди
+      return hasActive ? 3000 : 15000;
+    },
+    refetchOnWindowFocus: true,
   });
 }
 
@@ -67,11 +77,12 @@ export function useOrder(orderId: number) {
     enabled: orderId > 0,
     refetchInterval: (query) => {
       const status = query.state.data?.status;
-      if (!status) return 3500;
-      // Опитуємо кожні 3.5 секунди, поки замовлення активне
-      const terminalStatuses = ["completed", "rejected", "cancelled"];
-      return !terminalStatuses.includes(status) ? 3500 : false;
+      if (!status) return 3000;
+      // Опитуємо кожні 3 секунди, поки замовлення активне
+      const terminalStatuses = ["completed", "delivered", "rejected", "cancelled"];
+      return !terminalStatuses.includes(status) ? 3000 : false;
     },
+    refetchOnWindowFocus: true,
   });
 }
 

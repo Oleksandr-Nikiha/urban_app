@@ -196,6 +196,8 @@ export interface Order {
   scheduled_time?: string | null;
   comment: string | null;
   total_price: number;
+  bonus_spent?: number;
+  bonus_earned?: number;
   created_at: string;
   groups: OrderGroup[];
 }
@@ -493,6 +495,7 @@ export interface AdminUser {
   is_phone_verified?: boolean;
   admin_note: string | null;
   orders_count: number;
+  bonus_balance?: number;
   created_at: string;
 }
 
@@ -500,6 +503,28 @@ export interface AdminUserUpdatePayload {
   is_blocked?: boolean;
   admin_note?: string | null;
   is_phone_verified?: boolean;
+  bonus_balance?: number;
+  bonus_adjustment?: number;
+  bonus_adjustment_reason?: string;
+}
+
+export interface BonusAnalytics {
+  total_users_with_bonuses: number;
+  total_bonus_pool: number;
+  total_bonuses_issued: number;
+  total_bonuses_redeemed: number;
+  total_orders_with_cashback: number;
+}
+
+export interface BonusTransaction {
+  id: number;
+  user_id: number;
+  order_id: number | null;
+  amount: number;
+  balance_after: number;
+  transaction_type: string;
+  description: string | null;
+  created_at: string;
 }
 
 // --- Керування та редагування замовлень (Адмінка) ---
@@ -546,6 +571,8 @@ export interface AdminOrderListItem {
   scheduled_time: string | null;
   comment: string | null;
   total_price: number;
+  bonus_spent?: number;
+  bonus_earned?: number;
   created_at: string;
   items_summary: string;
   location_id: number | null;
@@ -567,6 +594,8 @@ export interface AdminOrderDetail {
   scheduled_time: string | null;
   comment: string | null;
   total_price: number;
+  bonus_spent?: number;
+  bonus_earned?: number;
   created_at: string;
   user_is_blocked: boolean;
   user_admin_note: string | null;

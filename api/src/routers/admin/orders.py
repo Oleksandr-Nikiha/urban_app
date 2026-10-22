@@ -15,6 +15,7 @@ from src.schemas.admin import (
     AdminOrderListItemOut,
     AdminOrderUpdateIn,
 )
+from src.services.bonus_service import BonusService
 from src.services.telegram_client import send_telegram_message
 
 logger = logging.getLogger(__name__)
@@ -331,6 +332,13 @@ async def update_admin_order(
                 total_calculated_price,
                 order_id,
             )
+
+        # Обробка бонусів при зміні статусу замовлення
+        if status_changed and new_status:
+            if new_status in ("completed", "delivered"):
+                await BonusService.process_order_completion_bonuses(conn, order_id)
+            elif new_status in ("rejected", "cancelled"):
+                await BonusService.refund_order_bonuses_if_cancelled(conn, order_id)
 
     if status_changed and new_status and existing_tg_id:
         settings = get_settings()

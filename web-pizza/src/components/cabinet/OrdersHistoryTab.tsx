@@ -166,10 +166,22 @@ export function OrdersHistoryTab({
                   </div>
                 )}
 
-                {/* Нижній рядок: Сума і Дії */}
+                {/* Нижній рядок: Сума, бонуси і Дії */}
                 <div className="pt-2.5 border-t border-white/10 flex items-center justify-between gap-2">
-                  <div className="text-sm font-extrabold text-white">
-                    {order.total_price} ₴
+                  <div>
+                    <div className="text-sm font-extrabold text-white">
+                      {order.total_price} ₴
+                    </div>
+                    {((order.bonus_spent && order.bonus_spent > 0) || (order.bonus_earned && order.bonus_earned > 0)) && (
+                      <div className="flex items-center gap-2 text-[10px] mt-0.5">
+                        {order.bonus_spent ? (
+                          <span className="text-amber-400 font-medium">-{order.bonus_spent} б.</span>
+                        ) : null}
+                        {order.bonus_earned ? (
+                          <span className="text-emerald-400 font-bold">+{order.bonus_earned} б. кешбек</span>
+                        ) : null}
+                      </div>
+                    )}
                   </div>
 
                   <div className="flex items-center gap-1.5">

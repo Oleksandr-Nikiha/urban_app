@@ -37,8 +37,9 @@ function getStatusBadge(status: string, fulfillmentType?: string) {
         bg: "rgba(139, 92, 246, 0.12)",
       };
     case "completed":
+    case "delivered":
       return {
-        label: "🎉 Виконано",
+        label: status === "delivered" ? "🛵 Доставлено" : "🎉 Виконано",
         color: "#22c55e",
         bg: "rgba(34, 197, 94, 0.12)",
       };
@@ -178,9 +179,25 @@ export function OrdersPage() {
     );
   }
 
+  const hasActiveOrders = Boolean(
+    orders?.some(
+      (o) => !["completed", "delivered", "rejected", "cancelled"].includes(o.status),
+    ),
+  );
+
   return (
     <div className="pb-8">
-      <ScreenTitle>Мої замовлення</ScreenTitle>
+      <ScreenTitle>
+        <div className="flex items-center justify-between w-full pr-2">
+          <span>Мої замовлення</span>
+          {hasActiveOrders && (
+            <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-emerald-500 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-full font-normal">
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+              Лайв
+            </span>
+          )}
+        </div>
+      </ScreenTitle>
 
       <div className="app-rise space-y-3 px-4 pt-1">
         {orders.map((order: Order) => {
@@ -238,16 +255,28 @@ export function OrdersPage() {
                 {allItems.map((it) => `${it.product_name} ×${it.qty}`).join(", ")}
               </div>
 
-              {/* Футер: сума та стрілочка */}
+              {/* Футер: сума, бонуси та стрілочка */}
               <div
                 className="flex items-center justify-between pt-2 border-t"
                 style={{ borderColor: "var(--app-border)" }}
               >
-                <div className="flex items-baseline gap-1.5">
-                  <span className="text-xs opacity-50">Сума:</span>
-                  <span className="text-base font-extrabold text-[var(--tg-theme-button-color)]">
-                    {formatPrice(order.total_price)}
-                  </span>
+                <div>
+                  <div className="flex items-baseline gap-1.5">
+                    <span className="text-xs opacity-50">Сума:</span>
+                    <span className="text-base font-extrabold text-[var(--tg-theme-button-color)]">
+                      {formatPrice(order.total_price)}
+                    </span>
+                  </div>
+                  {((order.bonus_spent && order.bonus_spent > 0) || (order.bonus_earned && order.bonus_earned > 0)) && (
+                    <div className="flex items-center gap-2 text-[10px] mt-0.5 font-medium">
+                      {order.bonus_spent ? (
+                        <span className="text-amber-400">-{order.bonus_spent} б.</span>
+                      ) : null}
+                      {order.bonus_earned ? (
+                        <span className="text-emerald-400 font-bold">+{order.bonus_earned} б. кешбек</span>
+                      ) : null}
+                    </div>
+                  )}
                 </div>
 
                 <div className="flex items-center gap-2">

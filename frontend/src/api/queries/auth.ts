@@ -6,7 +6,7 @@ import {
 } from "@tanstack/react-query";
 
 import { ApiError, api, hasTelegramAuth, removeUserToken, setUserToken } from "@/api/client";
-import type { RegisterPayload, User, UserUpdatePayload } from "@/api/types";
+import type { BonusTransaction, RegisterPayload, User, UserUpdatePayload } from "@/api/types";
 import { keys } from "./keys";
 
 // --- Профіль і автентифікація ---
@@ -81,5 +81,13 @@ export function useUpdateProfile() {
   return useMutation({
     mutationFn: (payload: UserUpdatePayload) => api.patch<User>("/me", payload),
     onSuccess: (user) => qc.setQueryData(keys.me, user),
+  });
+}
+
+export function useMyBonusHistory() {
+  return useQuery({
+    queryKey: ["me", "bonuses", "history"],
+    queryFn: () => api.get<BonusTransaction[]>("/me/bonuses/history"),
+    staleTime: 30_000,
   });
 }

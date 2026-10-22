@@ -11,6 +11,7 @@ from src.schemas.order import (
     OrderOut,
     WebOrderCreateIn,
 )
+from src.services.bonus_service import BonusService
 from src.services.order_validation import validate_scheduled_time
 
 
@@ -240,14 +241,23 @@ async def create_web_order(
                 None,
             )
 
+        actual_bonus_spent = 0
+        if payload.bonus_spent > 0 and user_row:
+            actual_bonus_spent = await BonusService.spend_bonuses(
+                conn=conn,
+                user_id=user_row["id"],
+                order_id=0, # updated after insert
+                bonus_to_spend=payload.bonus_spent,
+            )
+
         order_row = await conn.fetchrow(
             """
             INSERT INTO orders (
                 telegram_id, status, fulfillment_type, delivery_address,
                 contact_name, contact_phone, payment_method, scheduled_time,
-                comment, total_price, source
+                comment, total_price, bonus_spent, source
             )
-            VALUES ($1, 'pending_moderation', $2, $3, $4, $5, $6, $7, $8, $9, $10)
+            VALUES ($1, 'pending_moderation', $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
             RETURNING id, created_at
             """,
             customer_tg_id,
@@ -259,10 +269,19 @@ async def create_web_order(
             clean_scheduled_time,
             payload.comment.strip() if payload.comment else None,
             total_order_price,
+            actual_bonus_spent,
             payload.source,
         )
         order_id = order_row["id"]
         created_at = order_row["created_at"]
+
+        if actual_bonus_spent > 0 and user_row:
+            await conn.execute(
+                "UPDATE bonus_transactions SET order_id = $1, description = $2 WHERE user_id = $3 AND order_id IS NULL AND transaction_type = 'order_redemption'",
+                order_id,
+                f"Списання бонусів на замовлення #{order_id}",
+                user_row["id"],
+            )
 
         group_row = await conn.fetchrow(
             """
@@ -363,6 +382,8 @@ async def create_web_order(
         scheduled_time=clean_scheduled_time,
         comment=payload.comment,
         total_price=total_order_price,
+        bonus_spent=actual_bonus_spent,
+        bonus_earned=0,
         created_at=created_at,
         source=payload.source,
         groups=[

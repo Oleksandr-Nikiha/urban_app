@@ -58,7 +58,7 @@ export function OrdersHistoryTab({
   if (loading) {
     return (
       <div className="py-12 flex flex-col items-center justify-center space-y-3">
-        <div className="w-8 h-8 border-3 border-[#E69A38] border-t-transparent rounded-full animate-spin" />
+        <div className="w-8 h-8 border-3 border-[#D34528] border-t-transparent rounded-full animate-spin" />
         <p className="text-xs font-semibold text-[#94A3B8]">Завантажуємо історію замовлень...</p>
       </div>
     );
@@ -67,12 +67,12 @@ export function OrdersHistoryTab({
   if (orders.length === 0) {
     return (
       <div className="text-center py-10 px-4 space-y-3 bg-[#181B22] rounded-2xl border border-white/10">
-        <span className="text-4xl block">🥐📦</span>
+        <span className="text-4xl block">🍕🍣</span>
         <h4 className="font-display text-base font-bold text-white">
           У вас поки немає замовлень
         </h4>
         <p className="text-xs text-[#94A3B8] max-w-sm mx-auto leading-relaxed">
-          Оберіть улюблені круасани, свіжу випічку або каву в нашому меню та оформіть перше замовлення!
+          Оберіть улюблену піцу, свіжі роли або бургер в нашому меню та оформіть перше замовлення!
         </p>
       </div>
     );
@@ -85,7 +85,7 @@ export function OrdersHistoryTab({
         <button
           type="button"
           onClick={onRefresh}
-          className="text-[#E69A38] hover:underline font-bold flex items-center gap-1 cursor-pointer"
+          className="text-[#E2583E] hover:underline font-bold flex items-center gap-1 cursor-pointer"
         >
           <span>🔄</span>
           <span>Оновити список</span>
@@ -146,7 +146,7 @@ export function OrdersHistoryTab({
                               {item.variant_label} • {item.qty} шт × {item.unit_price} ₴
                             </div>
                             {item.options && item.options.length > 0 && (
-                              <div className="text-[11px] text-[#E69A38]">
+                              <div className="text-[11px] text-amber-300">
                                 + {item.options.map((o) => o.option_name).join(", ")}
                               </div>
                             )}
@@ -166,10 +166,22 @@ export function OrdersHistoryTab({
                   </div>
                 )}
 
-                {/* Нижній рядок: Сума і Дії */}
+                {/* Нижній рядок: Сума, бонуси і Дії */}
                 <div className="pt-2.5 border-t border-white/10 flex items-center justify-between gap-2">
-                  <div className="text-sm font-extrabold text-white">
-                    {order.total_price} ₴
+                  <div>
+                    <div className="text-sm font-extrabold text-white">
+                      {order.total_price} ₴
+                    </div>
+                    {((order.bonus_spent && order.bonus_spent > 0) || (order.bonus_earned && order.bonus_earned > 0)) && (
+                      <div className="flex items-center gap-2 text-[10px] mt-0.5">
+                        {order.bonus_spent ? (
+                          <span className="text-amber-400 font-medium">-{order.bonus_spent} б.</span>
+                        ) : null}
+                        {order.bonus_earned ? (
+                          <span className="text-emerald-400 font-bold">+{order.bonus_earned} б. кешбек</span>
+                        ) : null}
+                      </div>
+                    )}
                   </div>
 
                   <div className="flex items-center gap-1.5">
@@ -193,7 +205,7 @@ export function OrdersHistoryTab({
                     <button
                       type="button"
                       onClick={() => onRepeatOrder(order)}
-                      className="text-xs bg-[#E69A38] hover:bg-[#D4892A] text-white px-3 py-1.5 rounded-xl font-bold transition-all active:scale-95 cursor-pointer flex items-center gap-1 shadow-xs"
+                      className="text-xs bg-[#D34528] hover:bg-[#B8351B] text-white px-3 py-1.5 rounded-xl font-bold transition-all active:scale-95 cursor-pointer flex items-center gap-1 shadow-xs"
                     >
                       <span>🔁</span>
                       <span>Повторити</span>

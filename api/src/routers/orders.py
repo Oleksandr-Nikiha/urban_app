@@ -124,7 +124,7 @@ async def get_web_orders_history(
             """
             SELECT id, telegram_id, status, fulfillment_type, delivery_address,
                    contact_name, contact_phone, payment_method, scheduled_time,
-                   comment, total_price, created_at, COALESCE(source, 'web') AS source
+                   comment, total_price, bonus_spent, bonus_earned, created_at, COALESCE(source, 'web') AS source
             FROM orders
             WHERE ($1::text IS NOT NULL AND (contact_phone = $1 OR contact_phone = $2))
                OR ($3::bigint IS NOT NULL AND telegram_id = $3)
@@ -204,7 +204,7 @@ async def get_user_orders(
             """
             SELECT id, telegram_id, status, fulfillment_type, delivery_address,
                    contact_name, contact_phone, payment_method, scheduled_time,
-                   comment, total_price, created_at, COALESCE(source, 'telegram') AS source
+                   comment, total_price, bonus_spent, bonus_earned, created_at, COALESCE(source, 'telegram') AS source
             FROM orders
             WHERE telegram_id = $1
             ORDER BY id DESC

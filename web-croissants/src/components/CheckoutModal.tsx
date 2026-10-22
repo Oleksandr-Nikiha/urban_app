@@ -10,6 +10,7 @@ import { CustomerInfoFields } from "./checkout/CustomerInfoFields.tsx";
 import { useModalBehavior } from "../hooks/useModalBehavior.ts";
 import { LAST_ORDER_STORAGE_KEY, ORDERS_HISTORY_STORAGE_KEY } from "./OrderTrackingModal.tsx";
 import { isUserAuthenticated, saveSharedProfile, USER_PROFILE_STORAGE_KEY, type UserProfile } from "../types/user.ts";
+import { calculateBonusCashback, getBonusCashbackPercentLabel } from "../utils/bonus.ts";
 
 interface CheckoutModalProps {
   isOpen: boolean;
@@ -229,6 +230,7 @@ export function CheckoutModal({
       payment_method: paymentMethod,
       scheduled_time: isAsap ? null : scheduledTime.trim() || null,
       comment: finalComment || null,
+      bonus_spent: bonusDiscount,
       source: "web_croissants",
       items: orderItems,
     };
@@ -264,12 +266,11 @@ export function CheckoutModal({
         ).slice(0, 10);
         localStorage.setItem(ORDERS_HISTORY_STORAGE_KEY, JSON.stringify(updated));
 
-        // Оновлюємо бонуси: списуємо використані та нараховуємо кешбек 5% від сплаченої суми
-        const cashbackEarned = Math.floor(finalPrice * 0.05);
+        // Оновлюємо бонуси: списуємо використані (кешбек буде нараховано сервером після виконання)
         const prevProfStr = localStorage.getItem(USER_PROFILE_STORAGE_KEY);
         const prevProf = prevProfStr ? JSON.parse(prevProfStr) : {};
         const prevBonus = typeof prevProf.bonuses === "number" ? prevProf.bonuses : 50;
-        const newBonusBalance = Math.max(0, prevBonus - bonusDiscount) + cashbackEarned;
+        const newBonusBalance = Math.max(0, prevBonus - bonusDiscount);
 
         const updatedProf: UserProfile = {
           ...prevProf,
@@ -502,9 +503,13 @@ export function CheckoutModal({
                   </span>
                 )}
               </div>
-              {finalPrice > 0 && (
+              {finalPrice > 50 ? (
                 <div className="text-[10px] text-emerald-400 font-medium">
-                  + {Math.floor(finalPrice * 0.05)} бонусів кешбеку (5%)
+                  + {calculateBonusCashback(finalPrice)} бонусів кешбеку ({getBonusCashbackPercentLabel(finalPrice)}) після виконання
+                </div>
+              ) : (
+                <div className="text-[10px] text-[#94A3B8] font-medium">
+                  Бонуси нараховуються від 50 ₴
                 </div>
               )}
             </div>

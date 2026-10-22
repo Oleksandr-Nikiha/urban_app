@@ -11,6 +11,7 @@ from src.auth.telegram_init_data import validate_init_data
 from src.config import get_settings
 from src.db.connection import get_pool
 from src.middleware.rate_limiter import rate_limiter
+from src.schemas.bonus import BonusTransactionOut
 from src.schemas.user import RegisterIn, UserOut, UserUpdateIn
 from src.services.user_helpers import (
     _sync_user_bonuses,
@@ -197,3 +198,27 @@ async def update_me(
         row = await _sync_user_bonuses(conn, row)
 
     return _user_to_out(row, settings.bot_token)
+
+
+@router.get("/me/bonuses/history", response_model=list[BonusTransactionOut])
+async def get_my_bonus_history(
+    limit: int = 50,
+    user=Depends(get_current_user),
+    pool: asyncpg.Pool = Depends(get_pool),
+):
+    """Повертає історію нарахувань та списань бонусів для поточного користувача."""
+    user_id = user["id"]
+    async with pool.acquire() as conn:
+        rows = await conn.fetch(
+            """
+            SELECT id, user_id, order_id, amount, balance_after, transaction_type,
+                   description, created_at
+            FROM bonus_transactions
+            WHERE user_id = $1
+            ORDER BY id DESC
+            LIMIT $2
+            """,
+            user_id,
+            limit,
+        )
+    return [BonusTransactionOut(**dict(r)) for r in rows]

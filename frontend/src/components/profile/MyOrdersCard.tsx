@@ -9,13 +9,11 @@ interface MyOrdersCardProps {
 export function MyOrdersCard({ orders }: MyOrdersCardProps) {
   const navigate = useNavigate();
   const ordersCount = orders?.length ?? 0;
+  const isTerminalStatus = (status: string) =>
+    ["completed", "delivered", "rejected", "cancelled"].includes(status);
+
   const activeOrdersCount =
-    orders?.filter(
-      (o) =>
-        o.status !== "completed" &&
-        o.status !== "rejected" &&
-        o.status !== "cancelled",
-    ).length ?? 0;
+    orders?.filter((o) => !isTerminalStatus(o.status)).length ?? 0;
 
   const formatActiveBadge = (count: number) => {
     if (count % 10 === 1 && count % 100 !== 11) {
@@ -52,9 +50,10 @@ export function MyOrdersCard({ orders }: MyOrdersCardProps) {
               <p className="text-sm font-bold">Мої замовлення</p>
               {activeOrdersCount > 0 ? (
                 <span
-                  className="rounded-full px-2 py-0.5 text-[10px] font-bold"
+                  className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold"
                   style={{ background: "rgba(234, 179, 8, 0.15)", color: "#eab308" }}
                 >
+                  <span className="h-1.5 w-1.5 rounded-full bg-amber-500 animate-pulse" />
                   {formatActiveBadge(activeOrdersCount)}
                 </span>
               ) : ordersCount > 0 ? (

@@ -7,7 +7,6 @@ import {
   popup,
   requestContact,
   swipeBehavior,
-  themeParams,
   viewport,
 } from "@telegram-apps/sdk-react";
 
@@ -102,35 +101,11 @@ export function initSdk(): void {
         miniApp.ready();
       }
     } catch { /* ignore */ }
-    // Безпечна прив'язка теми без гонки станів: перевірка наявності методів та асинхронний fallback
-    try {
-      if (themeParams.mountSync.isAvailable()) {
-        themeParams.mountSync();
-      } else if (themeParams.mount.isAvailable()) {
-        void themeParams.mount().then(() => {
-          if (themeParams.bindCssVars.isAvailable() && !themeParams.isCssVarsBound?.()) {
-            themeParams.bindCssVars();
-          }
-          dropEmptyThemeVars();
-          applyUrbanBrandTheme();
-        }).catch(() => {});
-      }
-
-      if (themeParams.bindCssVars.isAvailable() && !themeParams.isCssVarsBound?.()) {
-        themeParams.bindCssVars();
-      }
-      dropEmptyThemeVars();
-      applyUrbanBrandTheme();
-
-      if (themeParams.state?.sub) {
-        themeParams.state.sub(() => {
-          dropEmptyThemeVars();
-          applyUrbanBrandTheme();
-        });
-      }
-    } catch {
-      applyUrbanBrandTheme();
-    }
+    // Застосовуємо виключно фірмову тему Urban Bites.
+    // НЕ викликаємо themeParams.bindCssVars(), оскільки Telegram надсилає сторонні кольори
+    // (синій/блакитний клієнтський дефолт), які перебивають брендинг.
+    dropEmptyThemeVars();
+    applyUrbanBrandTheme();
 
     if (viewport.mount.isAvailable()) {
       void viewport.mount().then(() => {

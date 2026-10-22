@@ -8,6 +8,7 @@ from src.auth.telegram_widget import validate_telegram_widget_data
 from src.config import get_settings
 from src.db.connection import get_pool
 from src.middleware.rate_limiter import rate_limiter
+from src.schemas.bonus import BonusTransactionOut
 from src.schemas.user import UserOut, normalize_phone
 from src.services.user_helpers import _sync_user_bonuses, _user_to_out
 
@@ -418,3 +419,53 @@ async def update_web_profile(
         )
         synced = await _sync_user_bonuses(conn, updated_row)
         return _user_to_out(synced, settings.bot_token)
+
+
+@router.get("/bonuses/history", response_model=list[BonusTransactionOut])
+async def get_web_user_bonus_history(
+    phone: str | None = None,
+    telegram_id: int | None = None,
+    limit: int = 50,
+    pool: asyncpg.Pool = Depends(get_pool),
+):
+    """Повертає публічну історію нарахувань та списань бонусів за телефоном або telegram_id."""
+    clean_phone = phone.strip() if phone else None
+    if not clean_phone and not telegram_id:
+        return []
+
+    norm_phone = clean_phone
+    if clean_phone:
+        try:
+            norm_phone = normalize_phone(clean_phone)
+        except Exception:
+            norm_phone = clean_phone
+
+    async with pool.acquire() as conn:
+        user_id = await conn.fetchval(
+            """
+            SELECT id FROM users
+            WHERE ($1::text IS NOT NULL AND (phone = $1 OR phone = $2))
+               OR ($3::bigint IS NOT NULL AND telegram_id = $3)
+            ORDER BY id DESC
+            LIMIT 1
+            """,
+            clean_phone,
+            norm_phone,
+            telegram_id,
+        )
+        if not user_id:
+            return []
+
+        rows = await conn.fetch(
+            """
+            SELECT id, user_id, order_id, amount, balance_after, transaction_type,
+                   description, created_at
+            FROM bonus_transactions
+            WHERE user_id = $1
+            ORDER BY id DESC
+            LIMIT $2
+            """,
+            user_id,
+            limit,
+        )
+    return [BonusTransactionOut(**dict(r)) for r in rows]

@@ -4,11 +4,11 @@ interface UrbanClubSectionProps {
 
 export function UrbanClubSection({ onOpenCabinet }: UrbanClubSectionProps) {
   const tiers = [
-    { range: "До 100 ₴", percent: "1%", desc: "Базовий кешбек для невеликих покупок" },
-    { range: "100 – 700 ₴", percent: "3%", desc: "Найпопулярніший рівень для обідів та перекусів" },
-    { range: "700,01 – 1 200 ₴", percent: "4%", desc: "Для замовлень на компанію" },
-    { range: "1 200,01 – 1 800 ₴", percent: "5%", desc: "Для свят та дружніх зустрічей" },
-    { range: "Від 1 800,01 ₴", percent: "7%", desc: "Максимальний рівень кешбеку" },
+    { range: "50,01 – 100 ₴", percent: "1%", desc: "Базовий кешбек для невеликих перекусів та кави" },
+    { range: "100,01 – 700 ₴", percent: "3%", desc: "Найпопулярніший рівень для щоденних обідів" },
+    { range: "700,01 – 1 200 ₴", percent: "5%", desc: "Для сетів, піци та замовлень на двох" },
+    { range: "1 200,01 – 1 800 ₴", percent: "7%", desc: "Для компаній та дружніх посиденьок" },
+    { range: "Понад 1 800 ₴", percent: "10%", desc: "Максимальний рівень кешбеку на великі свята" },
   ];
 
   return (
