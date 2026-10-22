@@ -16,7 +16,6 @@ from src.db.redis import connect_redis, disconnect_redis
 from src.routers import (
     admin,
     admin_auth,
-    bonuses,
     cart,
     catalog,
     delivery_addresses,
@@ -155,7 +154,6 @@ app.include_router(users.router)
 app.include_router(web_auth.router)
 app.include_router(cart.router)
 app.include_router(orders.router)
-app.include_router(bonuses.router)
 app.include_router(locations.router)
 app.include_router(delivery_addresses.router)
 app.include_router(admin.router)
