@@ -111,5 +111,36 @@ export interface PosOrder {
   contact_name?: string | null;
   time_str: string;
   items_summary: string;
+  cancel_reason?: string | null;
   items?: PosOrderItemDetail[];
+}
+
+export interface PosCashOperation {
+  id: number;
+  staff_name: string;
+  operation_type: "cash_in" | "cash_out";
+  amount: number;
+  reason: string;
+  time_str: string;
+}
+
+export interface PosShift {
+  id: number;
+  location_id: number;
+  opened_by_name: string;
+  closed_by_name?: string | null;
+  opened_at_str: string;
+  status: "open" | "closed";
+  opening_cash: number;
+  closing_cash_actual?: number | null;
+  closing_cash_expected: number;
+  cash_inflow: number;
+  cash_outflow: number;
+  orders_count: number;
+  total_revenue: number;
+  cash_revenue: number;
+  card_revenue: number;
+  bonus_spent_total: number;
+  notes?: string | null;
+  cash_operations?: PosCashOperation[];
 }

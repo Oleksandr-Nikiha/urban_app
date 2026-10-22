@@ -59,3 +59,36 @@ class PosCloseTableIn(BaseModel):
     bonus_spent: int = Field(0, ge=0)
     customer_phone: str | None = None
     customer_name: str | None = None
+
+
+class PosOrderCancelIn(BaseModel):
+    reason: str = Field(..., min_length=2, max_length=300)
+    staff_name: str | None = None
+
+
+class PosOrderItemUpdateQtyIn(BaseModel):
+    qty: int = Field(..., ge=1, le=100)
+
+
+class PosShiftOpenIn(BaseModel):
+    location_id: int
+    opened_by_id: int | None = None
+    opened_by_name: str = Field("Персонал", max_length=100)
+    opening_cash: float = Field(0.0, ge=0.0)
+    notes: str | None = None
+
+
+class PosShiftCashOpIn(BaseModel):
+    location_id: int
+    staff_name: str = Field("Персонал", max_length=100)
+    operation_type: Literal["cash_in", "cash_out"]
+    amount: float = Field(..., gt=0.0)
+    reason: str = Field(..., min_length=2, max_length=250)
+
+
+class PosShiftCloseIn(BaseModel):
+    location_id: int
+    closed_by_id: int | None = None
+    closed_by_name: str = Field("Персонал", max_length=100)
+    closing_cash_actual: float = Field(..., ge=0.0)
+    notes: str | None = None

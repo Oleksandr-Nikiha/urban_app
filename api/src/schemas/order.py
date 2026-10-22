@@ -16,6 +16,7 @@ class OrderCreateIn(BaseModel):
     scheduled_time: str | None = Field(None, max_length=50)
     comment: str | None = Field(None, max_length=500)
     bonus_spent: int = 0
+    bonus_to_spend: int | None = Field(None, ge=0, description="Кількість бонусів для списання")
 
     @model_validator(mode="after")
     def validate_fulfillment(self) -> "OrderCreateIn":

@@ -1,8 +1,9 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   addItemsToOrder,
   authByPin,
   createPosOrder,
+  fetchCurrentShift,
   fetchMenu,
   fetchPosOrders,
   fetchStaffList,
@@ -17,16 +18,19 @@ import { PinLockScreen } from "./components/PinLockScreen";
 import { PosHeader } from "./components/PosHeader";
 import { ProductGrid } from "./components/ProductGrid";
 import { ProductModal } from "./components/ProductModal";
+import { ShiftModal } from "./components/ShiftModal";
 import type {
   CartItem,
   CartItemOption,
   Category,
   CustomerData,
   PosOrder,
+  PosShift,
   Product,
   ProductVariant,
   StaffMember,
 } from "./types";
+import { playNewOrderChime, playReadyChime } from "./utils/audio";
 
 export function App() {
   // Staff & Lock
@@ -38,6 +42,22 @@ export function App() {
   const [locationId, setLocationId] = useState<number>(1);
   const [activeTab, setActiveTab] = useState<"terminal" | "orders">("terminal");
   const [mobileTab, setMobileTab] = useState<"menu" | "cart">("menu");
+
+  // Cash Shift Management
+  const [shiftData, setShiftData] = useState<{
+    isOpen: boolean;
+    shift: PosShift | null;
+  }>({
+    isOpen: false,
+    shift: null,
+  });
+  const [isShiftModalOpen, setIsShiftModalOpen] = useState(false);
+
+  // Sound notifications
+  const [soundEnabled, setSoundEnabled] = useState<boolean>(() => {
+    const saved = localStorage.getItem("pos_sound_enabled");
+    return saved !== null ? saved === "true" : true;
+  });
 
   // Menu data
   const [categories, setCategories] = useState<Category[]>([]);
@@ -61,8 +81,18 @@ export function App() {
   const [modalProduct, setModalProduct] = useState<Product | null>(null);
   const [paymentMethod, setPaymentMethod] = useState<"cash" | "card" | null>(null);
 
-  // Orders list
+  // Orders list and audio tracking
   const [orders, setOrders] = useState<PosOrder[]>([]);
+  const prevOrdersRef = useRef<PosOrder[]>([]);
+  const isFirstLoadRef = useRef<boolean>(true);
+
+  const toggleSound = () => {
+    setSoundEnabled((prev) => {
+      const next = !prev;
+      localStorage.setItem("pos_sound_enabled", String(next));
+      return next;
+    });
+  };
 
   // 1. Initial staff load
   useEffect(() => {
@@ -73,7 +103,50 @@ export function App() {
       .catch((err) => console.error("Error loading staff:", err));
   }, []);
 
-  // 2. Load menu on location change
+  const loadShift = () => {
+    fetchCurrentShift(locationId)
+      .then((res) => {
+        setShiftData({
+          isOpen: res.is_open,
+          shift: res.shift || null,
+        });
+      })
+      .catch((err) => console.error("Error loading shift:", err));
+  };
+
+  const loadOrders = (isInitial = false) => {
+    fetchPosOrders(locationId)
+      .then((data) => {
+        if (!isInitial && !isFirstLoadRef.current && soundEnabled) {
+          const prev = prevOrdersRef.current;
+          const prevIds = new Set(prev.map((o) => o.id));
+
+          // Check if brand new order arrived
+          const hasNewOrder = data.some((o) => !prevIds.has(o.id));
+
+          // Check if an existing order just turned 'ready'
+          const hasOrderTurnedReady = data.some((o) => {
+            const old = prev.find((p) => p.id === o.id);
+            return old && old.status !== "ready" && o.status === "ready";
+          });
+
+          if (hasOrderTurnedReady) {
+            playReadyChime();
+          } else if (hasNewOrder) {
+            playNewOrderChime();
+          }
+        }
+
+        prevOrdersRef.current = data;
+        if (isInitial) {
+          isFirstLoadRef.current = false;
+        }
+        setOrders(data);
+      })
+      .catch((err) => console.error("Error loading orders:", err));
+  };
+
+  // 2. Load menu, shift & orders on location change
   useEffect(() => {
     setLoadingMenu(true);
     fetchMenu(locationId)
@@ -84,15 +157,19 @@ export function App() {
       .catch((err) => console.error("Error loading menu:", err))
       .finally(() => setLoadingMenu(false));
 
-    // Also load recent orders
-    loadOrders();
+    isFirstLoadRef.current = true;
+    loadOrders(true);
+    loadShift();
   }, [locationId]);
 
-  const loadOrders = () => {
-    fetchPosOrders(locationId)
-      .then((data) => setOrders(data))
-      .catch((err) => console.error("Error loading orders:", err));
-  };
+  // 3. Periodic silent auto-refresh (every 10s)
+  useEffect(() => {
+    const interval = setInterval(() => {
+      loadOrders(false);
+      loadShift();
+    }, 10000);
+    return () => clearInterval(interval);
+  }, [locationId, soundEnabled]);
 
   // Filtered products
   const displayedProducts = useMemo(() => {
@@ -271,7 +348,8 @@ export function App() {
       await createPosOrder(payload);
       handleClearCart();
       setMobileTab("menu");
-      loadOrders();
+      loadOrders(false);
+      loadShift();
       setActiveTab("orders");
     } catch (err: any) {
       alert(err.message || "Не вдалося відправити замовлення");
@@ -294,7 +372,7 @@ export function App() {
       handleClearCart();
       setAppendingOrderId(null);
       setMobileTab("menu");
-      loadOrders();
+      loadOrders(false);
       setActiveTab("orders");
     } catch (err: any) {
       alert(err.message || "Не вдалося додати позиції");
@@ -336,12 +414,13 @@ export function App() {
     await createPosOrder(payload);
     handleClearCart();
     setMobileTab("menu");
-    loadOrders();
+    loadOrders(false);
+    loadShift();
   };
 
   const handleStatusChange = async (orderId: number, statusVal: string) => {
     await updateOrderStatus(orderId, statusVal);
-    loadOrders();
+    loadOrders(false);
   };
 
   const cartTotalCount = cartItems.reduce((acc, it) => acc + it.qty, 0);
@@ -371,6 +450,10 @@ export function App() {
           activeTab={activeTab}
           onTabChange={setActiveTab}
           onLock={() => setIsLocked(true)}
+          shiftData={shiftData}
+          onOpenShiftModal={() => setIsShiftModalOpen(true)}
+          soundEnabled={soundEnabled}
+          onToggleSound={toggleSound}
         />
       )}
 
@@ -478,7 +561,8 @@ export function App() {
           /* Active Orders & KDS Board */
           <ActiveOrdersView
             orders={orders}
-            onRefresh={loadOrders}
+            staffName={currentStaff?.staff_name}
+            onRefresh={() => loadOrders(false)}
             onUpdateStatus={handleStatusChange}
             onAppendToOrder={handleStartAppend}
           />
@@ -506,6 +590,20 @@ export function App() {
           fulfillmentType={fulfillmentType}
           onClose={() => setPaymentMethod(null)}
           onConfirm={handleConfirmOrder}
+        />
+      )}
+
+      {/* Shift Management Modal */}
+      {isShiftModalOpen && currentStaff && (
+        <ShiftModal
+          locationId={locationId}
+          currentStaff={currentStaff}
+          shiftData={shiftData}
+          onClose={() => setIsShiftModalOpen(false)}
+          onRefreshShift={() => {
+            loadShift();
+            loadOrders(false);
+          }}
         />
       )}
     </div>

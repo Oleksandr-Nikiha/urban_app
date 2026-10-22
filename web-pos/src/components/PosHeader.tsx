@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import type { StaffMember } from "../types";
+import type { PosShift, StaffMember } from "../types";
 
 interface PosHeaderProps {
   currentLocationId: number;
@@ -9,6 +9,10 @@ interface PosHeaderProps {
   activeTab: "terminal" | "orders";
   onTabChange: (tab: "terminal" | "orders") => void;
   onLock: () => void;
+  shiftData: { isOpen: boolean; shift: PosShift | null };
+  onOpenShiftModal: () => void;
+  soundEnabled: boolean;
+  onToggleSound: () => void;
 }
 
 export function PosHeader({
@@ -19,6 +23,10 @@ export function PosHeader({
   activeTab,
   onTabChange,
   onLock,
+  shiftData,
+  onOpenShiftModal,
+  soundEnabled,
+  onToggleSound,
 }: PosHeaderProps) {
   const [time, setTime] = useState("");
 
@@ -37,6 +45,8 @@ export function PosHeader({
     const interval = setInterval(updateTime, 1000);
     return () => clearInterval(interval);
   }, []);
+
+  const { isOpen, shift } = shiftData;
 
   return (
     <header className="h-14 sm:h-16 bg-[#13171F] border-b border-white/10 px-3 sm:px-5 flex items-center justify-between shrink-0 select-none gap-2">
@@ -113,24 +123,61 @@ export function PosHeader({
         </button>
       </div>
 
-      {/* Staff badge, clock & Lock button */}
-      <div className="flex items-center space-x-2 sm:space-x-3 shrink-0">
-        <div className="text-right hidden lg:block">
+      {/* Shift status, Sound toggle, Staff badge, Clock & Lock */}
+      <div className="flex items-center space-x-2 sm:space-x-2.5 shrink-0">
+        {/* Shift status button */}
+        <button
+          type="button"
+          onClick={onOpenShiftModal}
+          className={`px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-xl text-xs font-bold border transition-all cursor-pointer active:scale-95 flex items-center space-x-1.5 ${
+            isOpen
+              ? "bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-300 border-emerald-500/30"
+              : "bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 border-rose-500/30 animate-pulse"
+          }`}
+          title="Керування касовою зміною"
+        >
+          <span className={`w-2 h-2 rounded-full ${isOpen ? "bg-emerald-400" : "bg-rose-400"}`} />
+          <span className="hidden sm:inline">
+            {isOpen ? `Зміна #${shift?.id || ""}` : "Каса закрита"}
+          </span>
+          <span className="sm:hidden">
+            {isOpen ? "Каса" : "Закрито"}
+          </span>
+        </button>
+
+        {/* Sound toggle button */}
+        <button
+          type="button"
+          onClick={onToggleSound}
+          title={soundEnabled ? "Звукові сповіщення увімкнено (натисніть щоб вимкнути)" : "Звукові сповіщення вимкнено"}
+          className={`p-2 rounded-xl border text-xs sm:text-sm transition-all cursor-pointer active:scale-95 ${
+            soundEnabled
+              ? "bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border-amber-500/30"
+              : "bg-white/5 hover:bg-white/10 text-zinc-500 border-white/10"
+          }`}
+        >
+          {soundEnabled ? "🔔" : "🔕"}
+        </button>
+
+        {/* Clock */}
+        <div className="text-right hidden xl:block">
           <p className="text-xs font-bold text-white">{time}</p>
           <p className="text-[10px] text-zinc-400">Київ</p>
         </div>
 
+        {/* Staff badge */}
         <div className="flex items-center space-x-1.5 bg-[#1A1F2B] border border-white/5 px-2 sm:px-3 py-1 rounded-xl">
           <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shrink-0" />
-          <p className="text-xs font-bold text-zinc-200 leading-tight max-w-[80px] sm:max-w-[120px] truncate">
+          <p className="text-xs font-bold text-zinc-200 leading-tight max-w-[70px] sm:max-w-[110px] truncate">
             {staff.staff_name}
           </p>
         </div>
 
+        {/* Lock button */}
         <button
           type="button"
           onClick={onLock}
-          title="Заблокувати"
+          title="Заблокувати термінал"
           className="p-2 sm:p-2.5 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/20 text-rose-400 transition-all cursor-pointer active:scale-95 flex items-center justify-center text-xs sm:text-sm shrink-0"
         >
           🔒

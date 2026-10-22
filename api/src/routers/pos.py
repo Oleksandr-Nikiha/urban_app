@@ -13,8 +13,13 @@ from src.schemas.pos import (
     PosAuthOut,
     PosCloseTableIn,
     PosCustomerLookupOut,
+    PosOrderCancelIn,
     PosOrderCreateIn,
+    PosOrderItemUpdateQtyIn,
     PosPinAuthIn,
+    PosShiftCashOpIn,
+    PosShiftCloseIn,
+    PosShiftOpenIn,
     PosStaffMemberOut,
 )
 from src.services.bonus_service import BonusService
@@ -417,15 +422,21 @@ async def create_pos_order(
 
             final_total = max(0.0, total_price - bonus_spent)
 
+            # Шукаємо активну відкриту зміну
+            active_shift_id = await conn.fetchval(
+                "SELECT id FROM pos_shifts WHERE location_id = $1 AND status = 'open' ORDER BY id DESC LIMIT 1",
+                payload.location_id,
+            )
+
             # Створення головного замовлення в таблиці orders
             order_id = await conn.fetchval(
                 """
                 INSERT INTO orders (
                     telegram_id, status, fulfillment_type, delivery_address,
                     contact_name, contact_phone, payment_method, scheduled_time,
-                    comment, total_price, bonus_spent, source, table_number, staff_name, is_paid
+                    comment, total_price, bonus_spent, source, table_number, staff_name, is_paid, shift_id
                 )
-                VALUES ($1, 'in_progress', $2, NULL, $3, $4, $5, NULL, $6, $7, $8, 'pos', $9, $10, $11)
+                VALUES ($1, 'in_progress', $2, NULL, $3, $4, $5, NULL, $6, $7, $8, 'pos', $9, $10, $11, $12)
                 RETURNING id
                 """,
                 customer_tg_id,
@@ -439,6 +450,7 @@ async def create_pos_order(
                 payload.table_number,
                 payload.staff_name,
                 is_paid,
+                active_shift_id,
             )
 
             # Списання бонусів
@@ -910,3 +922,512 @@ async def update_pos_order_status(
                 logger.warning("Помилка нарахування бонусів для замовлення #%s: %s", order_id, exc)
 
         return {"success": True, "order_id": order_id, "status": status_val}
+
+
+# -------------------------------------------------------------------------
+# ПУНКТ 4: Скасування та коригування відкритого чека
+# -------------------------------------------------------------------------
+
+
+@router.delete("/orders/{order_id}/items/{item_id}")
+async def remove_item_from_pos_order(
+    order_id: int,
+    item_id: int,
+    pool: asyncpg.Pool = Depends(get_pool),
+):
+    """Видаляє окрему страву з відкритого замовлення столу та перераховує чек."""
+    async with pool.acquire() as conn:
+        async with conn.transaction():
+            order = await conn.fetchrow(
+                "SELECT id, status, is_paid FROM orders WHERE id = $1 FOR UPDATE",
+                order_id,
+            )
+            if not order:
+                raise HTTPException(status_code=404, detail="Замовлення не знайдено")
+            if order["status"] in ("completed", "cancelled") or order["is_paid"]:
+                raise HTTPException(
+                    status_code=400,
+                    detail="Неможливо видалити страву з закритого або оплаченого чека",
+                )
+
+            item = await conn.fetchrow(
+                """
+                SELECT oi.id, oi.subtotal, oi.product_name, oi.order_group_id
+                FROM order_items oi
+                JOIN order_groups og ON og.id = oi.order_group_id
+                WHERE oi.id = $1 AND og.order_id = $2
+                """,
+                item_id,
+                order_id,
+            )
+            if not item:
+                raise HTTPException(status_code=404, detail="Позицію не знайдено в замовленні")
+
+            # Видаляємо опції страви та саму страву
+            await conn.execute("DELETE FROM order_item_options WHERE order_item_id = $1", item_id)
+            await conn.execute("DELETE FROM order_items WHERE id = $1", item_id)
+
+            # Перераховуємо підсумок чека
+            new_total = await conn.fetchval(
+                """
+                SELECT COALESCE(SUM(subtotal), 0)::float
+                FROM order_items oi
+                JOIN order_groups og ON og.id = oi.order_group_id
+                WHERE og.order_id = $1
+                """,
+                order_id,
+            )
+            await conn.execute(
+                "UPDATE orders SET total_price = $1, updated_at = now() WHERE id = $2",
+                new_total,
+                order_id,
+            )
+            await conn.execute(
+                "UPDATE order_groups SET subtotal = $1 WHERE id = $2",
+                new_total,
+                item["order_group_id"],
+            )
+
+            return {
+                "success": True,
+                "order_id": order_id,
+                "deleted_item_id": item_id,
+                "new_total": new_total,
+            }
+
+
+@router.patch("/orders/{order_id}/items/{item_id}/qty")
+async def update_item_qty_in_pos_order(
+    order_id: int,
+    item_id: int,
+    payload: PosOrderItemUpdateQtyIn,
+    pool: asyncpg.Pool = Depends(get_pool),
+):
+    """Змінює кількість порцій страви у відкритому чеку з перерахунком суми."""
+    async with pool.acquire() as conn:
+        async with conn.transaction():
+            order = await conn.fetchrow(
+                "SELECT id, status, is_paid FROM orders WHERE id = $1 FOR UPDATE",
+                order_id,
+            )
+            if not order:
+                raise HTTPException(status_code=404, detail="Замовлення не знайдено")
+            if order["status"] in ("completed", "cancelled") or order["is_paid"]:
+                raise HTTPException(status_code=400, detail="Неможливо змінити закритий чек")
+
+            item = await conn.fetchrow(
+                """
+                SELECT oi.id, oi.unit_price, oi.order_group_id
+                FROM order_items oi
+                JOIN order_groups og ON og.id = oi.order_group_id
+                WHERE oi.id = $1 AND og.order_id = $2
+                """,
+                item_id,
+                order_id,
+            )
+            if not item:
+                raise HTTPException(status_code=404, detail="Позицію не знайдено")
+
+            new_subtotal = round(float(item["unit_price"]) * payload.qty, 2)
+            await conn.execute(
+                "UPDATE order_items SET qty = $1, subtotal = $2 WHERE id = $3",
+                payload.qty,
+                new_subtotal,
+                item_id,
+            )
+
+            new_total = await conn.fetchval(
+                """
+                SELECT COALESCE(SUM(subtotal), 0)::float
+                FROM order_items oi
+                JOIN order_groups og ON og.id = oi.order_group_id
+                WHERE og.order_id = $1
+                """,
+                order_id,
+            )
+            await conn.execute(
+                "UPDATE orders SET total_price = $1, updated_at = now() WHERE id = $2",
+                new_total,
+                order_id,
+            )
+            await conn.execute(
+                "UPDATE order_groups SET subtotal = $1 WHERE id = $2",
+                new_total,
+                item["order_group_id"],
+            )
+
+            return {
+                "success": True,
+                "order_id": order_id,
+                "item_id": item_id,
+                "new_qty": payload.qty,
+                "new_total": new_total,
+            }
+
+
+@router.post("/orders/{order_id}/cancel")
+async def cancel_pos_order(
+    order_id: int,
+    payload: PosOrderCancelIn,
+    background_tasks: BackgroundTasks,
+    pool: asyncpg.Pool = Depends(get_pool),
+):
+    """Повне скасування замовлення/столу з обов'язковим зазначенням причини."""
+    settings = get_settings()
+
+    async with pool.acquire() as conn:
+        async with conn.transaction():
+            order = await conn.fetchrow(
+                """
+                SELECT o.id, o.status, o.total_price, o.table_number, o.bonus_spent,
+                       o.contact_phone, o.staff_name, o.is_paid,
+                       l.name AS location_name
+                FROM orders o
+                JOIN order_groups og ON og.order_id = o.id
+                JOIN locations l ON l.id = og.location_id
+                WHERE o.id = $1 FOR UPDATE
+                """,
+                order_id,
+            )
+            if not order:
+                raise HTTPException(status_code=404, detail="Замовлення не знайдено")
+            if order["status"] == "cancelled":
+                raise HTTPException(status_code=400, detail="Замовлення вже скасовано")
+
+            # Повертаємо бонуси якщо були списані
+            if order["bonus_spent"] and order["bonus_spent"] > 0:
+                try:
+                    await BonusService.refund_order_bonuses(
+                        conn, order_id, int(order["bonus_spent"])
+                    )
+                except Exception as exc:
+                    logger.warning(
+                        "Помилка повернення бонусів при скасуванні замовлення #%s: %s",
+                        order_id,
+                        exc,
+                    )
+
+            await conn.execute(
+                """
+                UPDATE orders
+                SET status = 'cancelled', cancel_reason = $1, updated_at = now()
+                WHERE id = $2
+                """,
+                payload.reason,
+                order_id,
+            )
+            await conn.execute(
+                "UPDATE order_groups SET status = 'cancelled' WHERE order_id = $1",
+                order_id,
+            )
+
+    # Сповіщення в Telegram
+    table_str = (
+        f"Стіл #{order['table_number']}"
+        if order["table_number"]
+        else f"Замовлення #{order_id}"
+    )
+    tg_text = (
+        f"❌ <b>{table_str} СКАСОВАНО</b>\n\n"
+        f"🏢 <b>Заклад:</b> {order['location_name']}\n"
+        f"👤 <b>Офіціант:</b> {payload.staff_name or order['staff_name']}\n"
+        f"⚠️ <b>Причина:</b> {html.escape(payload.reason)}\n"
+        f"💰 <b>Сума:</b> {order['total_price']:.2f} грн"
+    )
+    if settings.bot_token and settings.manager_chat_id:
+        background_tasks.add_task(
+            send_telegram_message,
+            token=settings.bot_token,
+            chat_id=settings.manager_chat_id,
+            text=tg_text,
+        )
+
+    return {
+        "success": True,
+        "order_id": order_id,
+        "status": "cancelled",
+        "reason": payload.reason,
+    }
+
+
+# -------------------------------------------------------------------------
+# ПУНКТ 3: Касові зміни та X/Z звіти
+# -------------------------------------------------------------------------
+
+
+@router.get("/shifts/current")
+async def get_current_shift(
+    location_id: int,
+    pool: asyncpg.Pool = Depends(get_pool),
+):
+    """Отримує поточну відкриту зміну для закладу з розрахованими показниками."""
+    async with pool.acquire() as conn:
+        shift = await conn.fetchrow(
+            """
+            SELECT id, location_id, opened_by_name, closed_by_name,
+                   to_char(opened_at, 'DD.MM.YYYY HH24:MI') AS opened_at_str,
+                   opened_at, closed_at, status, opening_cash::float AS opening_cash,
+                   closing_cash_actual::float AS closing_cash_actual,
+                   cash_inflow::float AS cash_inflow, cash_outflow::float AS cash_outflow,
+                   notes
+            FROM pos_shifts
+            WHERE location_id = $1 AND status = 'open'
+            ORDER BY id DESC LIMIT 1
+            """,
+            location_id,
+        )
+        if not shift:
+            return {"is_open": False, "shift": None}
+
+        shift_id = shift["id"]
+        stats = await conn.fetchrow(
+            """
+            SELECT
+                COUNT(id) AS orders_count,
+                COALESCE(SUM(CASE WHEN is_paid = true AND status != 'cancelled' THEN total_price ELSE 0 END), 0)::float AS total_revenue,
+                COALESCE(SUM(CASE WHEN is_paid = true AND status != 'cancelled' AND payment_method = 'cash' THEN total_price ELSE 0 END), 0)::float AS cash_revenue,
+                COALESCE(SUM(CASE WHEN is_paid = true AND status != 'cancelled' AND payment_method = 'card' THEN total_price ELSE 0 END), 0)::float AS card_revenue,
+                COALESCE(SUM(CASE WHEN is_paid = true AND status != 'cancelled' THEN bonus_spent ELSE 0 END), 0)::float AS bonus_spent_total
+            FROM orders
+            WHERE shift_id = $1
+            """,
+            shift_id,
+        )
+
+        opening_cash = shift["opening_cash"]
+        cash_in = shift["cash_inflow"]
+        cash_out = shift["cash_outflow"]
+        cash_rev = stats["cash_revenue"] if stats else 0.0
+        expected_cash = round(opening_cash + cash_rev + cash_in - cash_out, 2)
+
+        data = dict(shift)
+        data.update(dict(stats) if stats else {})
+        data["closing_cash_expected"] = expected_cash
+
+        # Також повертаємо список останніх службових операцій зміни
+        cash_ops = await conn.fetch(
+            """
+            SELECT id, staff_name, operation_type, amount::float AS amount, reason,
+                   to_char(created_at, 'HH24:MI') AS time_str
+            FROM pos_cash_operations
+            WHERE shift_id = $1
+            ORDER BY id DESC LIMIT 20
+            """,
+            shift_id,
+        )
+        data["cash_operations"] = [dict(op) for op in cash_ops]
+
+        return {"is_open": True, "shift": data}
+
+
+@router.post("/shifts/open")
+async def open_shift(
+    payload: PosShiftOpenIn,
+    pool: asyncpg.Pool = Depends(get_pool),
+):
+    """Відкриває нову касову зміну для закладу."""
+    async with pool.acquire() as conn:
+        existing = await conn.fetchval(
+            "SELECT id FROM pos_shifts WHERE location_id = $1 AND status = 'open'",
+            payload.location_id,
+        )
+        if existing:
+            raise HTTPException(status_code=400, detail="Зміна для цього закладу вже відкрита")
+
+        shift_id = await conn.fetchval(
+            """
+            INSERT INTO pos_shifts (location_id, opened_by_id, opened_by_name, opening_cash, notes, status)
+            VALUES ($1, $2, $3, $4, $5, 'open')
+            RETURNING id
+            """,
+            payload.location_id,
+            payload.opened_by_id,
+            payload.opened_by_name,
+            payload.opening_cash,
+            payload.notes,
+        )
+        return {"success": True, "shift_id": shift_id, "status": "open"}
+
+
+@router.post("/shifts/cash-op")
+async def add_cash_operation(
+    payload: PosShiftCashOpIn,
+    pool: asyncpg.Pool = Depends(get_pool),
+):
+    """Службове внесення або службове вилучення готівки в касі."""
+    async with pool.acquire() as conn:
+        async with conn.transaction():
+            shift = await conn.fetchrow(
+                "SELECT id FROM pos_shifts WHERE location_id = $1 AND status = 'open' FOR UPDATE",
+                payload.location_id,
+            )
+            if not shift:
+                raise HTTPException(status_code=400, detail="Немає відкритої зміни")
+
+            shift_id = shift["id"]
+            await conn.execute(
+                """
+                INSERT INTO pos_cash_operations (shift_id, location_id, staff_name, operation_type, amount, reason)
+                VALUES ($1, $2, $3, $4, $5, $6)
+                """,
+                shift_id,
+                payload.location_id,
+                payload.staff_name,
+                payload.operation_type,
+                payload.amount,
+                payload.reason,
+            )
+
+            if payload.operation_type == "cash_in":
+                await conn.execute(
+                    "UPDATE pos_shifts SET cash_inflow = cash_inflow + $1 WHERE id = $2",
+                    payload.amount,
+                    shift_id,
+                )
+            else:
+                await conn.execute(
+                    "UPDATE pos_shifts SET cash_outflow = cash_outflow + $1 WHERE id = $2",
+                    payload.amount,
+                    shift_id,
+                )
+
+            return {
+                "success": True,
+                "shift_id": shift_id,
+                "operation_type": payload.operation_type,
+                "amount": payload.amount,
+            }
+
+
+@router.post("/shifts/close")
+async def close_shift(
+    payload: PosShiftCloseIn,
+    background_tasks: BackgroundTasks,
+    pool: asyncpg.Pool = Depends(get_pool),
+):
+    """Закриває касову зміну (Z-звіт), фіксує фактичну готівку та сповіщає менеджерів."""
+    settings = get_settings()
+
+    async with pool.acquire() as conn:
+        async with conn.transaction():
+            shift = await conn.fetchrow(
+                """
+                SELECT s.*, l.name AS location_name
+                FROM pos_shifts s
+                JOIN locations l ON l.id = s.location_id
+                WHERE s.location_id = $1 AND s.status = 'open' FOR UPDATE
+                """,
+                payload.location_id,
+            )
+            if not shift:
+                raise HTTPException(status_code=400, detail="Немає відкритої зміни для закриття")
+
+            # Перевіряємо, чи немає незакритих столів
+            unclosed_tables = await conn.fetchval(
+                """
+                SELECT COUNT(*) FROM orders o
+                JOIN order_groups og ON og.order_id = o.id
+                WHERE og.location_id = $1 AND o.fulfillment_type = 'dine_in'
+                  AND o.is_paid = false AND o.status != 'cancelled'
+                """,
+                payload.location_id,
+            )
+            if unclosed_tables > 0:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Неможливо закрити зміну: є {unclosed_tables} незакритих столів! Спочатку закрийте або скасуйте їх.",
+                )
+
+            shift_id = shift["id"]
+            stats = await conn.fetchrow(
+                """
+                SELECT
+                    COUNT(id) AS orders_count,
+                    COALESCE(SUM(CASE WHEN is_paid = true AND status != 'cancelled' THEN total_price ELSE 0 END), 0)::float AS total_revenue,
+                    COALESCE(SUM(CASE WHEN is_paid = true AND status != 'cancelled' AND payment_method = 'cash' THEN total_price ELSE 0 END), 0)::float AS cash_revenue,
+                    COALESCE(SUM(CASE WHEN is_paid = true AND status != 'cancelled' AND payment_method = 'card' THEN total_price ELSE 0 END), 0)::float AS card_revenue,
+                    COALESCE(SUM(CASE WHEN is_paid = true AND status != 'cancelled' THEN bonus_spent ELSE 0 END), 0)::float AS bonus_spent_total
+                FROM orders
+                WHERE shift_id = $1
+                """,
+                shift_id,
+            )
+
+            opening_cash = float(shift["opening_cash"])
+            cash_in = float(shift["cash_inflow"])
+            cash_out = float(shift["cash_outflow"])
+            cash_rev = float(stats["cash_revenue"])
+            card_rev = float(stats["card_revenue"])
+            total_rev = float(stats["total_revenue"])
+            orders_cnt = int(stats["orders_count"])
+            bonus_total = float(stats["bonus_spent_total"])
+            expected_cash = round(opening_cash + cash_rev + cash_in - cash_out, 2)
+            actual_cash = payload.closing_cash_actual
+            cash_diff = round(actual_cash - expected_cash, 2)
+
+            await conn.execute(
+                """
+                UPDATE pos_shifts
+                SET status = 'closed', closed_at = now(), closed_by_id = $1, closed_by_name = $2,
+                    closing_cash_actual = $3, closing_cash_expected = $4,
+                    total_orders_count = $5, total_revenue = $6, cash_revenue = $7,
+                    card_revenue = $8, bonus_spent_total = $9, notes = $10, updated_at = now()
+                WHERE id = $11
+                """,
+                payload.closed_by_id,
+                payload.closed_by_name,
+                actual_cash,
+                expected_cash,
+                orders_cnt,
+                total_rev,
+                cash_rev,
+                card_rev,
+                bonus_total,
+                payload.notes,
+                shift_id,
+            )
+
+    # Формування сповіщення Z-звіту в Telegram
+    diff_str = f"+{cash_diff:.2f}" if cash_diff > 0 else f"{cash_diff:.2f}"
+    diff_line = (
+        f"⚖️ <b>Різниця каси:</b> {diff_str} грн\n"
+        if cash_diff != 0
+        else "⚖️ <b>Каса зійшлася ідеально (0 грн)</b>\n"
+    )
+    tg_text = (
+        f"🏁 <b>Касова зміна #{shift_id} ЗАКРИТА (Z-звіт)</b>\n\n"
+        f"🏢 <b>Заклад:</b> {shift['location_name']}\n"
+        f"👤 <b>Закрив:</b> {payload.closed_by_name}\n"
+        f"🧾 <b>Чеків за зміну:</b> {orders_cnt}\n"
+        f"💰 <b>Загальний виторг:</b> {total_rev:.2f} грн\n"
+        f"  ▫️ Готівка: {cash_rev:.2f} грн\n"
+        f"  ▫️ Термінал (картка): {card_rev:.2f} грн\n"
+        f"  ▫️ Бонуси: {bonus_total:.2f} ₴\n"
+        f"📥 <b>Службові внесення:</b> +{cash_in:.2f} грн\n"
+        f"📤 <b>Службові вилучення:</b> -{cash_out:.2f} грн\n"
+        f"💵 <b>Очікувана готівка:</b> {expected_cash:.2f} грн\n"
+        f"💵 <b>Фактична готівка:</b> {actual_cash:.2f} грн\n"
+        f"{diff_line}"
+    )
+    if payload.notes:
+        tg_text += f"💬 <i>{html.escape(payload.notes)}</i>\n"
+
+    if settings.bot_token and settings.manager_chat_id:
+        background_tasks.add_task(
+            send_telegram_message,
+            token=settings.bot_token,
+            chat_id=settings.manager_chat_id,
+            text=tg_text,
+        )
+
+    return {
+        "success": True,
+        "shift_id": shift_id,
+        "orders_count": orders_cnt,
+        "total_revenue": total_rev,
+        "cash_revenue": cash_rev,
+        "card_revenue": card_rev,
+        "expected_cash": expected_cash,
+        "actual_cash": actual_cash,
+        "difference": cash_diff,
+    }

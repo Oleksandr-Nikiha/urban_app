@@ -146,3 +146,103 @@ export async function updateOrderStatus(orderId: number, statusVal: string) {
   if (!res.ok) throw new Error("Не вдалося змінити статус замовлення");
   return res.json();
 }
+
+export async function removeOrderItem(orderId: number, itemId: number) {
+  const res = await fetch(`${API_BASE}/pos/orders/${orderId}/items/${itemId}`, {
+    method: "DELETE",
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ detail: "Помилка видалення страви" }));
+    throw new Error(err.detail || "Не вдалося видалити страву");
+  }
+  return res.json();
+}
+
+export async function updateOrderItemQty(orderId: number, itemId: number, qty: number) {
+  const res = await fetch(`${API_BASE}/pos/orders/${orderId}/items/${itemId}/qty`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ qty }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ detail: "Помилка зміни кількості" }));
+    throw new Error(err.detail || "Не вдалося змінити кількість");
+  }
+  return res.json();
+}
+
+export async function cancelPosOrder(orderId: number, reason: string, staffName?: string) {
+  const res = await fetch(`${API_BASE}/pos/orders/${orderId}/cancel`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ reason, staff_name: staffName }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ detail: "Помилка скасування замовлення" }));
+    throw new Error(err.detail || "Не вдалося скасувати замовлення");
+  }
+  return res.json();
+}
+
+export async function fetchCurrentShift(locationId: number) {
+  const res = await fetch(`${API_BASE}/pos/shifts/current?location_id=${locationId}`);
+  if (!res.ok) throw new Error("Помилка завантаження зміни");
+  return res.json();
+}
+
+export async function openPosShift(payload: {
+  location_id: number;
+  opened_by_id?: number;
+  opened_by_name: string;
+  opening_cash: number;
+  notes?: string;
+}) {
+  const res = await fetch(`${API_BASE}/pos/shifts/open`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ detail: "Помилка відкриття зміни" }));
+    throw new Error(err.detail || "Не вдалося відкрити зміну");
+  }
+  return res.json();
+}
+
+export async function addCashOperation(payload: {
+  location_id: number;
+  staff_name: string;
+  operation_type: "cash_in" | "cash_out";
+  amount: number;
+  reason: string;
+}) {
+  const res = await fetch(`${API_BASE}/pos/shifts/cash-op`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ detail: "Помилка операції з готівкою" }));
+    throw new Error(err.detail || "Не вдалося виконати операцію з готівкою");
+  }
+  return res.json();
+}
+
+export async function closePosShift(payload: {
+  location_id: number;
+  closed_by_id?: number;
+  closed_by_name: string;
+  closing_cash_actual: number;
+  notes?: string;
+}) {
+  const res = await fetch(`${API_BASE}/pos/shifts/close`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ detail: "Помилка закриття зміни" }));
+    throw new Error(err.detail || "Не вдалося закрити зміну");
+  }
+  return res.json();
+}

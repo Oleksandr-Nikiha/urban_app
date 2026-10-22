@@ -307,6 +307,18 @@ class AdminOrderItemIn(BaseModel):
     options: list[AdminOrderItemOptionIn] = []
 
 
+class AdminOrderStatusPatchIn(BaseModel):
+    status: str
+    comment: str | None = None
+
+
+class AdminOrderStatusPatchOut(BaseModel):
+    id: int
+    status: str
+    bonus_earned: int = 0
+    bonus_processed: bool = False
+
+
 class AdminOrderUpdateIn(BaseModel):
     scheduled_time: str | None = None
     status: str | None = None

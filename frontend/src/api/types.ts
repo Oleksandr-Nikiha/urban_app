@@ -60,6 +60,50 @@ export interface ProductDetail {
   option_groups: OptionGroup[];
 }
 
+export interface BonusTransaction {
+  id: number;
+  user_id: number;
+  order_id: number | null;
+  amount: number;
+  balance_after: number;
+  transaction_type: "order_accrual" | "order_spend" | "order_refund" | "admin_adjustment";
+  description: string;
+  created_at: string;
+}
+
+export interface User {
+  id: number;
+  telegram_id?: number;
+  full_name: string;
+  phone: string;
+  bonus_balance: number;
+  auth_token?: string;
+  orders_count?: number;
+  is_blocked?: boolean;
+}
+
+export interface RegisterPayload {
+  full_name: string;
+  phone: string;
+  telegram_id?: number;
+}
+
+export interface UserUpdatePayload {
+  full_name?: string;
+  phone?: string;
+}
+
+export interface ShoppingListItem {
+  id: string;
+  title: string;
+  category?: string;
+  price?: number;
+  quantity: number;
+  completed: boolean;
+  created_at: string;
+}ups: OptionGroup[];
+}
+
 export interface User {
   id: number;
   telegram_id: number;

@@ -1,10 +1,16 @@
 import { useState } from "react";
-import { toggleItemServed } from "../api/client";
+import {
+  removeOrderItem,
+  toggleItemServed,
+  updateOrderItemQty,
+} from "../api/client";
 import type { PosOrder } from "../types";
+import { CancelOrderModal } from "./CancelOrderModal";
 import { CloseTableModal } from "./CloseTableModal";
 
 interface ActiveOrdersViewProps {
   orders: PosOrder[];
+  staffName?: string;
   onRefresh: () => void;
   onUpdateStatus: (orderId: number, statusVal: string) => Promise<void>;
   onAppendToOrder?: (order: PosOrder) => void;
@@ -12,13 +18,16 @@ interface ActiveOrdersViewProps {
 
 export function ActiveOrdersView({
   orders,
+  staffName,
   onRefresh,
   onUpdateStatus,
   onAppendToOrder,
 }: ActiveOrdersViewProps) {
   const [filter, setFilter] = useState<"all" | "active" | "completed">("active");
   const [closingOrder, setClosingOrder] = useState<PosOrder | null>(null);
+  const [cancellingOrder, setCancellingOrder] = useState<PosOrder | null>(null);
   const [togglingItemId, setTogglingItemId] = useState<number | null>(null);
+  const [modifyingItemId, setModifyingItemId] = useState<number | null>(null);
 
   const filteredOrders = orders.filter((o) => {
     if (filter === "active") return o.status === "in_progress" || o.status === "ready";
@@ -35,6 +44,39 @@ export function ActiveOrdersView({
       console.error("Error toggling item served:", err);
     } finally {
       setTogglingItemId(null);
+    }
+  };
+
+  const handleUpdateQty = async (orderId: number, itemId: number, newQty: number) => {
+    if (newQty < 1) {
+      if (window.confirm("Видалити цю позицію з чеку?")) {
+        handleRemoveItem(orderId, itemId);
+      }
+      return;
+    }
+    setModifyingItemId(itemId);
+    try {
+      await updateOrderItemQty(orderId, itemId, newQty);
+      onRefresh();
+    } catch (err: any) {
+      alert(err.message || "Помилка оновлення кількості");
+    } finally {
+      setModifyingItemId(null);
+    }
+  };
+
+  const handleRemoveItem = async (orderId: number, itemId: number, productName?: string) => {
+    if (productName && !window.confirm(`Видалити "${productName}" з замовлення?`)) {
+      return;
+    }
+    setModifyingItemId(itemId);
+    try {
+      await removeOrderItem(orderId, itemId);
+      onRefresh();
+    } catch (err: any) {
+      alert(err.message || "Помилка видалення позиції");
+    } finally {
+      setModifyingItemId(null);
     }
   };
 
@@ -76,7 +118,7 @@ export function ActiveOrdersView({
                 : "text-zinc-400 hover:text-white"
             }`}
           >
-            ✅ Видані
+            ✅ Видані / Скасовані
           </button>
           <button
             type="button"
@@ -104,13 +146,17 @@ export function ActiveOrdersView({
             {filteredOrders.map((order) => {
               const isReady = order.status === "ready";
               const isCompleted = order.status === "completed";
+              const isCancelled = order.status === "cancelled";
               const isDineIn = order.fulfillment_type === "dine_in";
+              const isModifiable = !isCompleted && !isCancelled;
 
               return (
                 <div
                   key={order.id}
                   className={`bg-[#13171F] border rounded-2xl p-3.5 sm:p-4 flex flex-col justify-between transition-all shadow ${
-                    isReady
+                    isCancelled
+                      ? "border-rose-500/20 bg-rose-950/10 opacity-75"
+                      : isReady
                       ? "border-emerald-500/40 shadow-emerald-500/5"
                       : isCompleted
                       ? "border-white/5 opacity-70"
@@ -120,7 +166,7 @@ export function ActiveOrdersView({
                   <div>
                     {/* Order card top */}
                     <div className="flex items-start justify-between mb-2">
-                      <div className="flex items-center space-x-2">
+                      <div className="flex items-center space-x-2 flex-wrap gap-y-1">
                         <span className="text-sm font-extrabold text-white">
                           #{order.id}
                         </span>
@@ -133,8 +179,12 @@ export function ActiveOrdersView({
                             З собою
                           </span>
                         )}
-                        {/* Payment badge */}
-                        {order.is_paid ? (
+                        {/* Status / Payment badge */}
+                        {isCancelled ? (
+                          <span className="px-1.5 py-0.5 rounded-md bg-rose-500/20 text-rose-400 font-bold text-[10px] border border-rose-500/30">
+                            🔴 Скасовано
+                          </span>
+                        ) : order.is_paid ? (
                           <span className="px-1.5 py-0.5 rounded-md bg-emerald-500/10 text-emerald-400 font-semibold text-[10px] border border-emerald-500/20">
                             ✓ {order.payment_method === "cash" ? "Готівка" : "Картка"}
                           </span>
@@ -144,7 +194,7 @@ export function ActiveOrdersView({
                           </span>
                         )}
                       </div>
-                      <span className="text-xs font-semibold text-zinc-400">
+                      <span className="text-xs font-semibold text-zinc-400 shrink-0 ml-1">
                         {order.time_str}
                       </span>
                     </div>
@@ -160,28 +210,37 @@ export function ActiveOrdersView({
                       )}
                     </div>
 
+                    {/* Cancellation reason banner if cancelled */}
+                    {isCancelled && order.cancel_reason && (
+                      <div className="p-2 mb-2.5 bg-rose-500/10 border border-rose-500/20 rounded-xl text-[11px] text-rose-300 leading-snug">
+                        <strong>Причина скасування:</strong> {order.cancel_reason}
+                      </div>
+                    )}
+
                     {/* Interactive Items List */}
                     <div className="bg-[#0B0D11] rounded-xl p-2 sm:p-2.5 border border-white/5 mb-3 max-h-56 overflow-y-auto space-y-1">
                       {order.items && order.items.length > 0 ? (
                         order.items.map((item) => (
                           <div
                             key={item.id}
-                            className="flex items-center justify-between py-1 px-1 rounded-lg hover:bg-white/5 transition-colors text-xs border-b border-white/5 last:border-0"
+                            className="flex items-center justify-between py-1.5 px-1 rounded-lg hover:bg-white/5 transition-colors text-xs border-b border-white/5 last:border-0 gap-2"
                           >
-                            <div className="flex items-center space-x-2 flex-1 pr-2 min-w-0">
-                              <button
-                                type="button"
-                                disabled={togglingItemId === item.id}
-                                onClick={() => handleToggleServed(item.id)}
-                                className={`px-2 py-0.5 rounded-lg text-[10px] font-bold border transition-all cursor-pointer shrink-0 ${
-                                  item.is_served
-                                    ? "bg-emerald-500/20 border-emerald-500/40 text-emerald-400"
-                                    : "bg-white/5 border-white/10 text-zinc-400 hover:text-white"
-                                }`}
-                                title="Натисніть щоб відмітити винесення страви"
-                              >
-                                {item.is_served ? "✓ Подано" : "⬜ Подати"}
-                              </button>
+                            <div className="flex items-center space-x-2 flex-1 min-w-0">
+                              {!isCancelled && (
+                                <button
+                                  type="button"
+                                  disabled={togglingItemId === item.id || isCompleted}
+                                  onClick={() => handleToggleServed(item.id)}
+                                  className={`px-1.5 py-0.5 rounded-lg text-[10px] font-bold border transition-all cursor-pointer shrink-0 ${
+                                    item.is_served
+                                      ? "bg-emerald-500/20 border-emerald-500/40 text-emerald-400"
+                                      : "bg-white/5 border-white/10 text-zinc-400 hover:text-white"
+                                  }`}
+                                  title="Натисніть щоб відмітити винесення страви"
+                                >
+                                  {item.is_served ? "✓ Подано" : "⬜ Подати"}
+                                </button>
+                              )}
                               <span
                                 className={`truncate font-medium ${
                                   item.is_served ? "line-through text-zinc-500" : "text-zinc-200"
@@ -191,9 +250,48 @@ export function ActiveOrdersView({
                                 {item.variant_label ? ` (${item.variant_label})` : ""}
                               </span>
                             </div>
+
+                            {/* Quantity controls and price */}
                             <div className="flex items-center space-x-2 shrink-0">
-                              <span className="text-zinc-400 font-semibold">×{item.qty}</span>
-                              <span className="text-white font-bold">{item.subtotal} ₴</span>
+                              {isModifiable ? (
+                                <div className="flex items-center space-x-0.5 bg-white/5 rounded-lg p-0.5 border border-white/10">
+                                  <button
+                                    type="button"
+                                    disabled={modifyingItemId === item.id}
+                                    onClick={() => handleUpdateQty(order.id, item.id, item.qty - 1)}
+                                    className="w-5 h-5 rounded flex items-center justify-center text-zinc-400 hover:text-white hover:bg-white/10 text-xs font-bold transition-colors cursor-pointer"
+                                    title="Зменшити кількість"
+                                  >
+                                    −
+                                  </button>
+                                  <span className="px-1 font-bold text-white text-[11px] min-w-[14px] text-center">
+                                    {item.qty}
+                                  </span>
+                                  <button
+                                    type="button"
+                                    disabled={modifyingItemId === item.id}
+                                    onClick={() => handleUpdateQty(order.id, item.id, item.qty + 1)}
+                                    className="w-5 h-5 rounded flex items-center justify-center text-zinc-400 hover:text-white hover:bg-white/10 text-xs font-bold transition-colors cursor-pointer"
+                                    title="Збільшити кількість"
+                                  >
+                                    +
+                                  </button>
+                                  <button
+                                    type="button"
+                                    disabled={modifyingItemId === item.id}
+                                    onClick={() => handleRemoveItem(order.id, item.id, item.product_name)}
+                                    className="w-5 h-5 rounded flex items-center justify-center text-rose-400 hover:text-rose-300 hover:bg-rose-500/20 text-[10px] transition-colors cursor-pointer ml-0.5"
+                                    title="Видалити страву з чеку"
+                                  >
+                                    🗑️
+                                  </button>
+                                </div>
+                              ) : (
+                                <span className="text-zinc-400 font-semibold">×{item.qty}</span>
+                              )}
+                              <span className="text-white font-bold min-w-[42px] text-right">
+                                {item.subtotal} ₴
+                              </span>
                             </div>
                           </div>
                         ))
@@ -224,7 +322,7 @@ export function ActiveOrdersView({
                       </div>
 
                       {/* Append items button for active tables */}
-                      {onAppendToOrder && !isCompleted && isDineIn && (
+                      {onAppendToOrder && isModifiable && isDineIn && (
                         <button
                           type="button"
                           onClick={() => onAppendToOrder(order)}
@@ -237,47 +335,64 @@ export function ActiveOrdersView({
                     </div>
 
                     {/* Action buttons row */}
-                    <div className="flex items-center justify-end space-x-2">
-                      {/* Settle / Close table button */}
-                      {!order.is_paid && !isCompleted && (
+                    <div className="flex items-center justify-between pt-1 gap-1 flex-wrap">
+                      {/* Cancel order button */}
+                      {isModifiable ? (
                         <button
                           type="button"
-                          onClick={() => setClosingOrder(order)}
-                          className="px-3 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-black text-xs font-black shadow-md shadow-amber-500/20 transition-all cursor-pointer active:scale-95 flex items-center space-x-1"
+                          onClick={() => setCancellingOrder(order)}
+                          className="px-2.5 py-1.5 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/20 text-xs font-bold transition-all cursor-pointer active:scale-95 flex items-center space-x-1"
+                          title="Скасувати чек з аудитом"
                         >
-                          <span>💳</span>
-                          <span>Розрахувати стіл</span>
+                          <span>❌</span>
+                          <span>Скасувати</span>
                         </button>
+                      ) : (
+                        <div />
                       )}
 
-                      {/* Ready button */}
-                      {order.status === "in_progress" && (
-                        <button
-                          type="button"
-                          onClick={() => onUpdateStatus(order.id, "ready")}
-                          className="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition-all cursor-pointer shadow active:scale-95"
-                        >
-                          ✓ Готово
-                        </button>
-                      )}
+                      <div className="flex items-center space-x-2">
+                        {/* Settle / Close table button */}
+                        {!order.is_paid && isModifiable && (
+                          <button
+                            type="button"
+                            onClick={() => setClosingOrder(order)}
+                            className="px-3 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-black text-xs font-black shadow-md shadow-amber-500/20 transition-all cursor-pointer active:scale-95 flex items-center space-x-1"
+                          >
+                            <span>💳</span>
+                            <span>Розрахувати стіл</span>
+                          </button>
+                        )}
 
-                      {/* Completed / Delivered button */}
-                      {order.status === "ready" && order.is_paid && (
-                        <button
-                          type="button"
-                          onClick={() => onUpdateStatus(order.id, "completed")}
-                          className="px-3 py-1.5 rounded-xl bg-[#1A1F2B] hover:bg-[#252D40] text-zinc-300 hover:text-white text-xs font-bold border border-white/10 transition-all cursor-pointer active:scale-95"
-                        >
-                          Закрити
-                        </button>
-                      )}
+                        {/* Ready button */}
+                        {order.status === "in_progress" && (
+                          <button
+                            type="button"
+                            onClick={() => onUpdateStatus(order.id, "ready")}
+                            className="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition-all cursor-pointer shadow active:scale-95"
+                          >
+                            ✓ Готово
+                          </button>
+                        )}
 
-                      {order.status === "completed" && (
-                        <span className="text-xs font-bold text-emerald-400 flex items-center space-x-1">
-                          <span>✓</span>
-                          <span>Закрито</span>
-                        </span>
-                      )}
+                        {/* Completed / Delivered button */}
+                        {order.status === "ready" && order.is_paid && (
+                          <button
+                            type="button"
+                            onClick={() => onUpdateStatus(order.id, "completed")}
+                            className="px-3 py-1.5 rounded-xl bg-[#1A1F2B] hover:bg-[#252D40] text-zinc-300 hover:text-white text-xs font-bold border border-white/10 transition-all cursor-pointer active:scale-95"
+                          >
+                            Закрити
+                          </button>
+                        )}
+
+                        {order.status === "completed" && (
+                          <span className="text-xs font-bold text-emerald-400 flex items-center space-x-1">
+                            <span>✓</span>
+                            <span>Закрито</span>
+                          </span>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -294,6 +409,19 @@ export function ActiveOrdersView({
           onClose={() => setClosingOrder(null)}
           onSuccess={() => {
             setClosingOrder(null);
+            onRefresh();
+          }}
+        />
+      )}
+
+      {/* Cancel Order Modal */}
+      {cancellingOrder && (
+        <CancelOrderModal
+          order={cancellingOrder}
+          staffName={staffName}
+          onClose={() => setCancellingOrder(null)}
+          onSuccess={() => {
+            setCancellingOrder(null);
             onRefresh();
           }}
         />

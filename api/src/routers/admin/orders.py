@@ -13,6 +13,8 @@ from src.schemas.admin import (
     AdminOrderItemOptionOut,
     AdminOrderItemOut,
     AdminOrderListItemOut,
+    AdminOrderStatusPatchIn,
+    AdminOrderStatusPatchOut,
     AdminOrderUpdateIn,
 )
 from src.services.bonus_service import BonusService
@@ -158,6 +160,68 @@ async def get_admin_order(
     res_dict = dict(order_row)
     res_dict["groups"] = groups_out
     return AdminOrderDetailOut(**res_dict)
+
+
+@router.patch("/orders/{order_id}/status", response_model=AdminOrderStatusPatchOut)
+async def patch_admin_order_status(
+    order_id: int,
+    payload: AdminOrderStatusPatchIn,
+    background_tasks: BackgroundTasks,
+    pool: asyncpg.Pool = Depends(get_pool),
+    staff: asyncpg.Record = Depends(get_current_staff),
+):
+    """Швидка зміна статусу замовлення з автоматичним тригером нарахування кешбеку або повернення бонусів."""
+    async with pool.acquire() as conn, conn.transaction():
+        order = await conn.fetchrow(
+            """
+            SELECT id, telegram_id, status, fulfillment_type, delivery_address, total_price
+            FROM orders
+            WHERE id = $1 FOR UPDATE
+            """,
+            order_id,
+        )
+        if not order:
+            raise HTTPException(status_code=404, detail="Замовлення не знайдено")
+
+        old_status = order["status"]
+        new_status = payload.status
+
+        if staff["role"] == "manager" and staff["location_id"] is not None:
+            loc_exists = await conn.fetchval(
+                "SELECT 1 FROM order_groups WHERE order_id = $1 AND location_id = $2",
+                order_id,
+                staff["location_id"],
+            )
+            if not loc_exists:
+                raise HTTPException(status_code=403, detail="Це замовлення належить іншому закладу")
+
+        if new_status != old_status:
+            await conn.execute(
+                "UPDATE orders SET status = $1, updated_at = now() WHERE id = $2",
+                new_status,
+                order_id,
+            )
+            await conn.execute(
+                "UPDATE order_groups SET status = $1 WHERE order_id = $2",
+                new_status,
+                order_id,
+            )
+            if new_status in ("completed", "delivered"):
+                await BonusService.process_order_completion_bonuses(conn, order_id)
+            elif new_status in ("rejected", "cancelled"):
+                await BonusService.refund_order_bonuses_if_cancelled(conn, order_id)
+
+        updated = await conn.fetchrow(
+            "SELECT id, status, bonus_earned, bonus_processed FROM orders WHERE id = $1",
+            order_id,
+        )
+
+    return AdminOrderStatusPatchOut(
+        id=updated["id"],
+        status=updated["status"],
+        bonus_earned=updated["bonus_earned"],
+        bonus_processed=updated["bonus_processed"],
+    )
 
 
 @router.put("/orders/{order_id}", response_model=AdminOrderDetailOut)
