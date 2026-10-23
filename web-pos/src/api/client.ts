@@ -58,6 +58,7 @@ export interface CreateOrderPayload {
   customer_name?: string;
   payment_method: "cash" | "card" | "pending";
   bonus_spent: number;
+  discount_percent?: number;
   comment?: string;
   items: {
     variant_id: number;
@@ -117,6 +118,7 @@ export async function closeTableOrder(
   payload: {
     payment_method: "cash" | "card";
     bonus_spent?: number;
+    discount_percent?: number;
     customer_phone?: string;
     customer_name?: string;
   }

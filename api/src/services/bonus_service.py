@@ -55,21 +55,40 @@ class BonusService:
             if user:
                 return user
         if clean_phone:
+            # Спробуємо нормалізувати номер до стандарту (+380...)
+            try:
+                from src.schemas.user import normalize_phone
+                norm_phone = normalize_phone(clean_phone)
+            except Exception:
+                norm_phone = clean_phone
+
+            # Шукаємо точний збіг або за останніми 9 цифрами
+            digits = "".join(ch for ch in clean_phone if ch.isdigit())
             user = await conn.fetchrow(
-                "SELECT * FROM users WHERE phone = $1 OR phone = $2 LIMIT 1",
+                """
+                SELECT * FROM users 
+                WHERE phone = $1 
+                   OR phone = $2 
+                   OR phone = $3 
+                   OR (length($4) >= 9 AND phone LIKE '%' || $4)
+                LIMIT 1
+                """,
+                norm_phone,
                 clean_phone,
                 clean_phone.replace("+", ""),
+                digits[-9:] if len(digits) >= 9 else digits,
             )
             if user:
                 return user
-            # Створюємо нового користувача з 50 вітальними бонусами
+            # Створюємо нового користувача з 50 вітальними бонусами (зберігаємо нормалізований номер)
+            save_phone = norm_phone if norm_phone.startswith("+380") else clean_phone
             new_id = await conn.fetchval(
                 """
                 INSERT INTO users (phone, full_name, telegram_id, bonus_balance, is_phone_verified)
                 VALUES ($1, $2, $3, 50, FALSE)
                 RETURNING id
                 """,
-                clean_phone,
+                save_phone,
                 full_name or "Клієнт",
                 telegram_id,
             )
@@ -144,7 +163,8 @@ class BonusService:
         order = await conn.fetchrow(
             """
             SELECT id, telegram_id, contact_phone, contact_name, total_price,
-                   bonus_spent, bonus_earned, bonus_processed, status
+                   bonus_spent, bonus_earned, bonus_processed, status,
+                   COALESCE(discount_percent, 0) AS discount_percent
             FROM orders
             WHERE id = $1 FOR UPDATE
             """,
@@ -157,9 +177,21 @@ class BonusService:
             logger.info("Бонуси для замовлення #%s вже були нараховані раніше", order_id)
             return 0
 
-        total_price = float(order["total_price"] or 0.0)
+        # Якщо на замовлення була застосована знижка (> 0%), бонуси не нараховуються
+        discount_percent = int(order.get("discount_percent") or 0)
+        if discount_percent > 0:
+            logger.info("Замовлення #%s має знижку %s%% — кешбек не нараховується", order_id, discount_percent)
+            await conn.execute(
+                "UPDATE orders SET bonus_processed = TRUE, bonus_earned = 0 WHERE id = $1",
+                order_id,
+            )
+            return 0
+
+        # Бали нараховуються на суму, яку сплатив клієнт грошима (за вирахуванням списаних бонусів)
+        # total_price в orders зберігає фактичну суму до сплати (після списання бонусів та знижки)
+        paid_amount = float(order["total_price"] or 0.0)
         # Сума більше 50 грн, розраховуємо бонуси за шкалою
-        earned = calculate_bonus_earned(total_price)
+        earned = calculate_bonus_earned(paid_amount)
 
         user = await BonusService.get_or_create_user_for_order(
             conn,
@@ -192,7 +224,7 @@ class BonusService:
             user_id,
         )
         if earned > 0:
-            rate_percent = int(calculate_bonus_rate(total_price) * 100)
+            rate_percent = int(calculate_bonus_rate(paid_amount) * 100)
             await conn.execute(
                 """
                 INSERT INTO bonus_transactions (user_id, order_id, amount, balance_after, transaction_type, description)

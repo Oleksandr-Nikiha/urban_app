@@ -106,6 +106,7 @@ export interface PosOrder {
   is_paid: boolean;
   total_price: number;
   bonus_spent: number;
+  discount_percent?: number;
   comment: string | null;
   contact_phone?: string | null;
   contact_name?: string | null;

@@ -389,7 +389,7 @@ export function App() {
   };
 
   // Payment confirmation (Takeaway)
-  const handleConfirmOrder = async () => {
+  const handleConfirmOrder = async (discountPercent: number = 0) => {
     if (!paymentMethod) return;
 
     const payload = {
@@ -402,6 +402,7 @@ export function App() {
       customer_name: customer?.first_name || undefined,
       payment_method: paymentMethod,
       bonus_spent: bonusSpent,
+      discount_percent: discountPercent,
       comment: orderComment || undefined,
       items: cartItems.map((it) => ({
         variant_id: it.variant_id,

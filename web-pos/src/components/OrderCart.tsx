@@ -286,7 +286,7 @@ export function OrderCart({
                   Бонуси: <span className="font-bold text-amber-400">{customer.bonus_balance} ₴</span>
                 </p>
               </div>
-              {customer.bonus_balance > 0 && subtotal > 0 && (
+              {fulfillmentType !== "dine_in" && customer.bonus_balance > 0 && subtotal > 0 && (
                 <button
                   type="button"
                   onClick={onToggleBonus}
@@ -338,7 +338,7 @@ export function OrderCart({
             <span>Сума замовлення</span>
             <span>{subtotal} ₴</span>
           </div>
-          {bonusSpent > 0 && (
+          {fulfillmentType !== "dine_in" && bonusSpent > 0 && (
             <div className="flex items-center justify-between text-xs text-emerald-400 font-semibold">
               <span>Списано бонусів</span>
               <span>-{bonusSpent} ₴</span>
@@ -346,7 +346,9 @@ export function OrderCart({
           )}
           <div className="flex items-center justify-between text-base font-extrabold text-white pt-1">
             <span>{fulfillmentType === "dine_in" && !appendingOrderId ? "Попередній рахунок" : "До сплати"}</span>
-            <span className="text-xl text-amber-400">{finalTotal} ₴</span>
+            <span className="text-xl text-amber-400">
+              {fulfillmentType === "dine_in" && !appendingOrderId ? subtotal : finalTotal} ₴
+            </span>
           </div>
         </div>
 

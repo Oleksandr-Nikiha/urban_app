@@ -412,20 +412,68 @@ export function ShiftModal({
           {/* 4. Close Shift Form (Z-звіт) */}
           {isOpen && mode === "close_form" && shift && (
             <div className="space-y-3.5 py-1">
-              <div className="bg-[#0B0D11] border border-white/5 rounded-2xl p-3 text-xs space-y-1.5">
-                <div className="flex justify-between text-zinc-400">
-                  <span>Очікувана готівка:</span>
-                  <span className="font-bold text-amber-400 text-sm">
+              <div className="bg-[#0B0D11] border border-white/5 rounded-2xl p-3 text-xs space-y-2">
+                <div className="text-[11px] font-bold text-zinc-400 uppercase tracking-wider pb-1 border-b border-white/5">
+                  Касовий підсумок зміни
+                </div>
+
+                <div className="space-y-1 text-zinc-300">
+                  <div className="flex justify-between">
+                    <span>Початкова каса:</span>
+                    <span className="font-semibold text-white">{shift.opening_cash} ₴</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>💵 Виторг готівкою:</span>
+                    <span className="font-bold text-emerald-400">+{shift.cash_revenue} ₴</span>
+                  </div>
+                  <div className="flex justify-between text-zinc-400">
+                    <span>📥 Службові внесення:</span>
+                    <span className="font-semibold text-emerald-300">+{shift.cash_inflow} ₴</span>
+                  </div>
+                  <div className="flex justify-between text-zinc-400">
+                    <span>📤 Службові вилучення:</span>
+                    <span className="font-semibold text-rose-400">-{shift.cash_outflow} ₴</span>
+                  </div>
+                </div>
+
+                {/* Formula breakdown */}
+                <div className="pt-2 border-t border-white/5 flex justify-between items-baseline">
+                  <div>
+                    <span className="font-bold text-amber-400 block text-xs">
+                      Очікувана готівка в касі:
+                    </span>
+                    <span className="text-[10px] text-zinc-500 block">
+                      (Початкова + Внесення + Готівка) - Вилучення
+                    </span>
+                  </div>
+                  <span className="font-black text-amber-400 text-base">
                     {shift.closing_cash_expected} ₴
                   </span>
                 </div>
-                <div className="flex justify-between text-zinc-400">
-                  <span>Всього замовлень:</span>
-                  <span className="font-semibold text-white">{shift.orders_count}</span>
-                </div>
-                <div className="flex justify-between text-zinc-400">
-                  <span>Загальний виторг:</span>
-                  <span className="font-bold text-emerald-400">{shift.total_revenue} ₴</span>
+
+                {/* Terminal Separately */}
+                <div className="pt-2 border-t border-white/5 space-y-1">
+                  <div className="flex justify-between items-center text-zinc-300">
+                    <span className="flex items-center space-x-1">
+                      <span>💳</span>
+                      <span>Термінал (окремо, безготівка):</span>
+                    </span>
+                    <span className="font-bold text-cyan-400 text-xs">{shift.card_revenue} ₴</span>
+                  </div>
+                  {shift.bonus_spent_total > 0 && (
+                    <div className="flex justify-between text-zinc-400 text-[11px]">
+                      <span>🎁 Списано бонусів:</span>
+                      <span className="font-semibold text-amber-300">{shift.bonus_spent_total} ₴</span>
+                    </div>
+                  )}
+                  <div className="flex justify-between text-zinc-400 text-[11px] pt-1 border-t border-white/5">
+                    <span>Всього замовлень:</span>
+                    <span className="font-semibold text-white">{shift.orders_count}</span>
+                  </div>
+                  <div className="flex justify-between text-zinc-400 text-[11px]">
+                    <span>Загальний оборот (готівка + картка):</span>
+                    <span className="font-bold text-emerald-400">{shift.total_revenue} ₴</span>
+                  </div>
                 </div>
               </div>
 

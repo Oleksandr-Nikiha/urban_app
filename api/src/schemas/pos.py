@@ -46,6 +46,7 @@ class PosOrderCreateIn(BaseModel):
     customer_name: str | None = None
     payment_method: Literal["cash", "card", "pending"] = "pending"
     bonus_spent: int = Field(0, ge=0)
+    discount_percent: int = Field(0, ge=0, le=100)
     comment: str | None = Field(None, max_length=500)
     items: list[PosOrderItemIn] = Field(..., min_length=1)
 
@@ -57,6 +58,7 @@ class PosAddItemsIn(BaseModel):
 class PosCloseTableIn(BaseModel):
     payment_method: Literal["cash", "card"] = "cash"
     bonus_spent: int = Field(0, ge=0)
+    discount_percent: int = Field(0, ge=0, le=100)
     customer_phone: str | None = None
     customer_name: str | None = None
 

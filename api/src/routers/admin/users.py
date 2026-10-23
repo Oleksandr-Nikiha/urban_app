@@ -233,7 +233,9 @@ async def delete_admin_user(
         if existing["telegram_id"] is not None:
             tg_id = existing["telegram_id"]
             await conn.execute("DELETE FROM managers WHERE telegram_id = $1", tg_id)
-            await conn.execute("DELETE FROM carts WHERE telegram_id = $1", tg_id)
+            await conn.execute("DELETE FROM carts WHERE telegram_id = $1 OR user_id = $2", tg_id, user_id)
+        else:
+            await conn.execute("DELETE FROM carts WHERE user_id = $1", user_id)
 
         await conn.execute("DELETE FROM users WHERE id = $1", user_id)
 

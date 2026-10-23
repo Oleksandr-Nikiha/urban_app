@@ -9,7 +9,7 @@ import {
 import type { AdminUser, Location } from "@/api/types";
 import { EmptyState, ErrorBox, Spinner } from "@/components/ui";
 import { ManagerModal } from "./ManagerModal";
-import { haptic } from "@/telegram/sdk";
+import { haptic, hapticNotify, showConfirm } from "@/telegram/sdk";
 
 export function UsersTab({
   locations = [],
@@ -134,21 +134,31 @@ export function UsersTab({
               key={u.id}
               user={u}
               isSuperAdmin={isSuperAdmin}
-              onToggleBlock={() => {
+              onToggleBlock={async () => {
                 const action = u.is_blocked ? "розблокувати" : "заблокувати";
-                if (
-                  window.confirm(
-                    `Ви впевнені, що хочете ${action} користувача ${u.full_name}?`,
-                  )
-                ) {
+                const confirmed = await showConfirm(
+                  `Ви впевнені, що хочете ${action} користувача ${u.full_name}?`,
+                );
+                if (confirmed) {
                   updateUser.mutate({ userId: u.id, payload: { is_blocked: !u.is_blocked } });
                 }
               }}
-              onTogglePhoneVerified={() => {
-                updateUser.mutate({
-                  userId: u.id,
-                  payload: { is_phone_verified: !u.is_phone_verified },
-                });
+              onTogglePhoneVerified={async () => {
+                const action = u.is_phone_verified
+                  ? "зняти верифікацію телефону"
+                  : "встановити верифікацію телефону";
+                const message = `Ви впевнені, що хочете ${action} для клієнта ${u.full_name}? ${
+                  u.is_phone_verified
+                    ? "Клієнт зможе самостійно змінити свій номер у профілі."
+                    : ""
+                }`;
+                const confirmed = await showConfirm(message);
+                if (confirmed) {
+                  updateUser.mutate({
+                    userId: u.id,
+                    payload: { is_phone_verified: !u.is_phone_verified },
+                  });
+                }
               }}
               onSaveNote={(note) => {
                 updateUser.mutate({ userId: u.id, payload: { admin_note: note } });
@@ -173,13 +183,16 @@ export function UsersTab({
               }}
               onDelete={
                 isSuperAdmin
-                  ? () => {
-                      if (
-                        window.confirm(
-                          `Видалити користувача ${u.full_name} (${u.phone})? Цю дію не можна скасувати.`,
-                        )
-                      ) {
-                        deleteUser.mutate(u.id);
+                  ? async () => {
+                      const confirmed = await showConfirm(
+                        `Видалити користувача ${u.full_name} (${u.phone})? Цю дію не можна скасувати.`,
+                        "Видалення клієнта",
+                      );
+                      if (confirmed) {
+                        deleteUser.mutate(u.id, {
+                          onSuccess: () => hapticNotify("success"),
+                          onError: () => hapticNotify("error"),
+                        });
                       }
                     }
                   : undefined

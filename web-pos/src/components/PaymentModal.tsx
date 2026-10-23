@@ -6,8 +6,10 @@ interface PaymentModalProps {
   tableNumber: string;
   fulfillmentType: "dine_in" | "pickup";
   onClose: () => void;
-  onConfirm: () => Promise<void>;
+  onConfirm: (discountPercent?: number) => Promise<void>;
 }
+
+const DISCOUNT_OPTIONS = [0, 3, 5, 10, 15, 30, 50];
 
 export function PaymentModal({
   method,
@@ -17,12 +19,23 @@ export function PaymentModal({
   onClose,
   onConfirm,
 }: PaymentModalProps) {
-  const [cashReceived, setCashReceived] = useState<number>(totalAmount);
+  const [discountPercent, setDiscountPercent] = useState<number>(0);
+  const discountAmount = Math.round(totalAmount * (discountPercent / 100) * 100) / 100;
+  const finalAmount = Math.max(0, totalAmount - discountAmount);
+
+  const [cashReceived, setCashReceived] = useState<number>(finalAmount);
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-  const change = Math.max(0, cashReceived - totalAmount);
+  const change = Math.max(0, cashReceived - finalAmount);
+
+  const handleSelectDiscount = (pct: number) => {
+    setDiscountPercent(pct);
+    const newDiscountAmount = Math.round(totalAmount * (pct / 100) * 100) / 100;
+    const newFinal = Math.max(0, totalAmount - newDiscountAmount);
+    setCashReceived(newFinal);
+  };
 
   const handleCashPreset = (amount: number) => {
     setCashReceived(amount);
@@ -32,7 +45,7 @@ export function PaymentModal({
     setLoading(true);
     setErrorMsg(null);
     try {
-      await onConfirm();
+      await onConfirm(discountPercent);
       setSuccess(true);
       setTimeout(() => {
         onClose();
@@ -81,12 +94,47 @@ export function PaymentModal({
               </button>
             </div>
 
+            {/* Discount selector */}
+            <div className="mt-3 sm:mt-4 p-3 rounded-2xl bg-[#0B0D11] border border-white/5 space-y-1.5">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-bold text-zinc-400 block uppercase tracking-wider">
+                  Знижка
+                </span>
+                {discountPercent > 0 && (
+                  <span className="text-[10px] text-amber-400 font-bold">
+                    -{discountPercent}% (-{discountAmount} ₴)
+                  </span>
+                )}
+              </div>
+              <div className="grid grid-cols-4 gap-1.5 pt-0.5">
+                {DISCOUNT_OPTIONS.map((pct) => (
+                  <button
+                    key={pct}
+                    type="button"
+                    onClick={() => handleSelectDiscount(pct)}
+                    className={`py-1.5 px-2 rounded-xl text-xs font-extrabold transition-all cursor-pointer border ${
+                      discountPercent === pct
+                        ? "bg-amber-500 text-black border-amber-400 shadow-md shadow-amber-500/20"
+                        : "bg-[#1A1F2B] text-zinc-300 border-white/5 hover:bg-white/10"
+                    }`}
+                  >
+                    {pct === 0 ? "0%" : `-${pct}%`}
+                  </button>
+                ))}
+              </div>
+              {discountPercent > 0 && (
+                <p className="text-[10px] text-zinc-500 italic pt-0.5">
+                  ℹ️ При знижці кешбек-бонуси за це замовлення не нараховуються.
+                </p>
+              )}
+            </div>
+
             {/* Total display */}
-            <div className="my-4 sm:my-5 p-3.5 sm:p-4 rounded-2xl bg-[#0B0D11] border border-white/5 text-center">
+            <div className="my-3 sm:my-4 p-3.5 sm:p-4 rounded-2xl bg-[#0B0D11] border border-white/5 text-center">
               <p className="text-[11px] sm:text-xs font-semibold text-zinc-400 mb-0.5">
                 Сума до сплати
               </p>
-              <p className="text-2xl sm:text-3xl font-extrabold text-amber-400">{totalAmount} ₴</p>
+              <p className="text-2xl sm:text-3xl font-extrabold text-amber-400">{finalAmount} ₴</p>
             </div>
 
             {/* Cash change calculator */}
@@ -96,7 +144,7 @@ export function PaymentModal({
                   Отримано від клієнта
                 </label>
                 <div className="grid grid-cols-4 gap-1.5 sm:gap-2">
-                  {[totalAmount, 200, 500, 1000].map((val) => (
+                  {[finalAmount, 200, 500, 1000].map((val) => (
                     <button
                       key={val}
                       type="button"
@@ -107,7 +155,7 @@ export function PaymentModal({
                           : "bg-[#1A1F2B] border-white/5 text-zinc-300 hover:border-white/20"
                       }`}
                     >
-                      {val === totalAmount ? "Без решти" : `${val} ₴`}
+                      {val === finalAmount ? "Без решти" : `${val} ₴`}
                     </button>
                   ))}
                 </div>
@@ -121,7 +169,7 @@ export function PaymentModal({
                   />
                 </div>
 
-                {cashReceived >= totalAmount && (
+                {cashReceived >= finalAmount && (
                   <div className="p-2.5 sm:p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-between">
                     <span className="text-xs font-bold text-emerald-300">Решта гостю:</span>
                     <span className="text-sm sm:text-base font-extrabold text-emerald-400">

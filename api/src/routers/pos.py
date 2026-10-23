@@ -403,6 +403,11 @@ async def create_pos_order(
             is_paid = payload.payment_method in ("cash", "card")
             bonus_spent = 0
 
+            # Знижка на замовлення
+            discount_pct = payload.discount_percent if payload.discount_percent in (3, 5, 10, 15, 30, 50) else 0
+            discount_amount = round(total_price * (discount_pct / 100.0), 2)
+            price_after_discount = max(0.0, total_price - discount_amount)
+
             # Бонуси списуються одразу тільки при миттєвій оплаті (на виніс)
             if is_paid and payload.customer_phone:
                 customer_user = await BonusService.get_or_create_user_for_order(
@@ -414,13 +419,13 @@ async def create_pos_order(
                     customer_tg_id = customer_user.get("telegram_id")
                     if payload.bonus_spent > 0:
                         max_can_spend = min(
-                            int(total_price),
+                            int(price_after_discount),
                             int(customer_user.get("bonus_balance") or 0),
                             payload.bonus_spent,
                         )
                         bonus_spent = max_can_spend
 
-            final_total = max(0.0, total_price - bonus_spent)
+            final_total = max(0.0, price_after_discount - bonus_spent)
 
             # Шукаємо активну відкриту зміну
             active_shift_id = await conn.fetchval(
@@ -434,9 +439,9 @@ async def create_pos_order(
                 INSERT INTO orders (
                     telegram_id, status, fulfillment_type, delivery_address,
                     contact_name, contact_phone, payment_method, scheduled_time,
-                    comment, total_price, bonus_spent, source, table_number, staff_name, is_paid, shift_id
+                    comment, total_price, bonus_spent, discount_percent, source, table_number, staff_name, is_paid, shift_id
                 )
-                VALUES ($1, 'in_progress', $2, NULL, $3, $4, $5, NULL, $6, $7, $8, 'pos', $9, $10, $11, $12)
+                VALUES ($1, 'in_progress', $2, NULL, $3, $4, $5, NULL, $6, $7, $8, $9, 'pos', $10, $11, $12, $13)
                 RETURNING id
                 """,
                 customer_tg_id,
@@ -447,6 +452,7 @@ async def create_pos_order(
                 payload.comment,
                 final_total,
                 bonus_spent,
+                discount_pct,
                 payload.table_number,
                 payload.staff_name,
                 is_paid,
@@ -557,7 +563,8 @@ async def list_pos_orders(
             """
             SELECT o.id, o.status, o.fulfillment_type, o.table_number, o.staff_name,
                    o.payment_method, o.is_paid, o.total_price::float AS total_price,
-                   o.bonus_spent, o.comment, o.contact_phone, o.contact_name,
+                   o.bonus_spent, COALESCE(o.discount_percent, 0) AS discount_percent,
+                   o.comment, o.contact_phone, o.contact_name,
                    o.cancel_reason,
                    to_char(o.created_at, 'HH24:MI') AS time_str,
                    COALESCE(
@@ -818,6 +825,11 @@ async def close_pos_table_order(
         customer_phone = payload.customer_phone or order["contact_phone"]
         customer_name = payload.customer_name or order["contact_name"]
 
+        # Знижка на замовлення
+        discount_pct = payload.discount_percent if payload.discount_percent in (3, 5, 10, 15, 30, 50) else 0
+        discount_amount = round(current_total * (discount_pct / 100.0), 2)
+        price_after_discount = max(0.0, current_total - discount_amount)
+
         customer_user = None
         bonus_spent = 0
         if customer_phone and customer_phone != "POS":
@@ -828,13 +840,13 @@ async def close_pos_table_order(
             )
             if customer_user and payload.bonus_spent > 0:
                 max_spend = min(
-                    int(current_total),
+                    int(price_after_discount),
                     int(customer_user.get("bonus_balance") or 0),
                     payload.bonus_spent,
                 )
                 bonus_spent = max_spend
 
-        final_total = max(0.0, current_total - bonus_spent)
+        final_total = max(0.0, price_after_discount - bonus_spent)
 
         # Списання бонусів
         if customer_user and bonus_spent > 0:
@@ -850,12 +862,13 @@ async def close_pos_table_order(
             """
                 UPDATE orders
                 SET payment_method = $1, is_paid = true, status = 'completed',
-                    total_price = $2, bonus_spent = $3, updated_at = now()
-                WHERE id = $4
+                    total_price = $2, bonus_spent = $3, discount_percent = $4, updated_at = now()
+                WHERE id = $5
                 """,
             payload.payment_method,
             final_total,
             bonus_spent,
+            discount_pct,
             order_id,
         )
         await conn.execute(
