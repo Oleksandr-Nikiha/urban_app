@@ -65,48 +65,18 @@ class TestBonusServiceCustomerRegistration:
         assert not any("INSERT INTO users" in str(call) for call in mock_db_conn.fetchval.mock_calls)
 
     @pytest.mark.asyncio
-    async def test_get_or_create_user_under_threshold_returns_none(self, mock_db_conn):
-        """Якщо замовлень менше 5 (< auto_create_min_orders), користувач НЕ створюється."""
-        # 1. Пошук існуючого користувача -> None
+    async def test_get_or_create_user_returns_none_when_not_registered(self, mock_db_conn):
+        """Якщо користувача не знайдено, автореєстрація НЕ викликається і повертається None."""
         mock_db_conn.fetchrow.return_value = None
-        # 2. Підрахунок кількості замовлень -> 3
-        mock_db_conn.fetchval.return_value = 3
 
         res = await BonusService.get_or_create_user_for_order(
             conn=mock_db_conn,
             phone="0631234567",
-            auto_create_min_orders=5,
         )
         assert res is None
         # Перевірка що INSERT в users не відбувався
         for call in mock_db_conn.fetchval.mock_calls:
             assert "INSERT INTO users" not in str(call)
-
-    @pytest.mark.asyncio
-    async def test_get_or_create_user_at_threshold_auto_registers(self, mock_db_conn):
-        """Якщо замовлень >= 5, клієнт автоматично реєструється з 50 бонусами."""
-        # Пошук існуючого користувача: перший виклик -> None, після створення -> новий користувач
-        created_user = {
-            "id": 42,
-            "phone": "+380631234567",
-            "full_name": "Client",
-            "first_name": "Client",
-            "bonus_balance": 50,
-            "telegram_id": None,
-        }
-        mock_db_conn.fetchrow.side_effect = [None, None, created_user]
-        # Підрахунок кількості замовлень -> 5, потім fetchval для INSERT RETURNING id -> 42
-        mock_db_conn.fetchval.side_effect = [5, 42]
-
-        res = await BonusService.get_or_create_user_for_order(
-            conn=mock_db_conn,
-            phone="0631234567",
-            auto_create_min_orders=5,
-        )
-        assert res == created_user
-        # Перевірка що був виклик bonus_transactions з welcome бонусами
-        executed_sqls = [str(call) for call in mock_db_conn.execute.mock_calls]
-        assert any("bonus_transactions" in sql and "welcome" in sql for sql in executed_sqls)
 
     @pytest.mark.asyncio
     async def test_manual_register_customer(self, mock_db_conn):

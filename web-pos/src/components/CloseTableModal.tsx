@@ -150,7 +150,7 @@ export function CloseTableModal({ order, onClose, onSuccess }: CloseTableModalPr
                 value={customerPhone}
                 onChange={(e) => setCustomerPhone(e.target.value.replace(/\D/g, ""))}
                 onKeyDown={(e) => e.key === "Enter" && handleLookup()}
-                placeholder="0631234567"
+                placeholder="Телефон (необовʼязково, 063...)"
                 className="flex-1 bg-[#1A1F2B] border border-white/10 rounded-xl px-3 py-1.5 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-amber-500"
               />
               <button
@@ -168,11 +168,6 @@ export function CloseTableModal({ order, onClose, onSuccess }: CloseTableModalPr
                 <div>
                   <p className="text-xs font-bold text-emerald-400 flex items-center space-x-1">
                     <span>{customer.first_name || "Client"}</span>
-                    {customer.orders_count !== undefined && (
-                      <span className="text-[10px] font-normal text-zinc-400">
-                        ({customer.orders_count} зам.)
-                      </span>
-                    )}
                   </p>
                   <p className="text-[10px] text-zinc-400">
                     Баланс: <span className="font-bold text-amber-400">{customer.bonus_balance} ₴</span>
@@ -197,14 +192,8 @@ export function CloseTableModal({ order, onClose, onSuccess }: CloseTableModalPr
             {customer && !customer.found && (
               <div className="pt-2 border-t border-white/5 space-y-1.5">
                 <div className="flex items-center justify-between text-[11px]">
-                  <span className="text-zinc-400">
-                    Не в клубі • <strong className="text-white">{customer.orders_count ?? 0}/5</strong> зам.
-                  </span>
-                  <span className="text-[10px] text-amber-400/90 font-medium">
-                    {customer.orders_count && customer.orders_count >= 5
-                      ? "Буде зареєстровано!"
-                      : `Ще ${Math.max(0, 5 - (customer.orders_count ?? 0))} до автореєстрації`}
-                  </span>
+                  <span className="text-zinc-400">Гість не в URBAN CLUB</span>
+                  <span className="text-[10px] text-zinc-500">без бонусного рахунку</span>
                 </div>
                 <button
                   type="button"
@@ -212,7 +201,7 @@ export function CloseTableModal({ order, onClose, onSuccess }: CloseTableModalPr
                   className="w-full py-1.5 px-2 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/40 text-amber-300 font-bold text-[11px] flex items-center justify-center space-x-1 cursor-pointer transition-colors"
                 >
                   <span>👤➕</span>
-                  <span>Зареєструвати гостя зараз (+50 ₴)</span>
+                  <span>Зареєструвати гостя (+50 ₴)</span>
                 </button>
               </div>
             )}

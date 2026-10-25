@@ -474,16 +474,9 @@ async def create_pos_order(
                 f"Стіл {payload.table_number}" if payload.table_number else "Client"
             )
 
-            # Перевіряємо користувача / автореєстрацію від 5-го замовлення
+            # Перевіряємо зареєстрованого користувача (для списання бонусів)
             if norm_phone:
                 customer_user = await BonusService.find_user_by_phone_or_tg(conn, phone=norm_phone)
-                past_orders_count = await BonusService.count_orders_by_phone(conn, norm_phone)
-                # Автореєстрація клієнта від 5-го замовлення (поточне замовлення є +1)
-                if not customer_user and (past_orders_count + 1) >= 5:
-                    customer_user = await BonusService.register_customer(
-                        conn, phone=norm_phone, full_name="Client"
-                    )
-
                 if customer_user:
                     customer_tg_id = customer_user.get("telegram_id")
                     if is_paid and payload.bonus_spent > 0:
@@ -907,13 +900,6 @@ async def close_pos_table_order(
         bonus_spent = 0
         if norm_phone:
             customer_user = await BonusService.find_user_by_phone_or_tg(conn, phone=norm_phone)
-            past_orders_count = await BonusService.count_orders_by_phone(conn, norm_phone)
-            # Автореєстрація клієнта від 5-го замовлення
-            if not customer_user and past_orders_count >= 5:
-                customer_user = await BonusService.register_customer(
-                    conn, phone=norm_phone, full_name="Client"
-                )
-
             if customer_user and payload.bonus_spent > 0:
                 max_spend = min(
                     int(price_after_discount),

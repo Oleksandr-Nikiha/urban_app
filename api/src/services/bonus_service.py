@@ -142,31 +142,13 @@ class BonusService:
     @staticmethod
     async def get_or_create_user_for_order(
         conn: asyncpg.Connection,
-        phone: str,
+        phone: str | None = None,
         telegram_id: int | None = None,
         full_name: str | None = None,
         auto_create_min_orders: int = 5,
     ) -> asyncpg.Record | dict[str, Any] | None:
-        """Знаходить користувача. Якщо не знайдено — автореєструє лише від 5-го замовлення."""
-        existing = await BonusService.find_user_by_phone_or_tg(conn, phone=phone, telegram_id=telegram_id)
-        if existing:
-            return existing
-
-        # Якщо передано номер телефону, перевіряємо чи настав поріг автореєстрації
-        if phone:
-            from src.schemas.user import standardize_phone
-
-            norm_phone = standardize_phone(phone)
-            if norm_phone:
-                orders_count = await BonusService.count_orders_by_phone(conn, norm_phone)
-                if orders_count >= auto_create_min_orders:
-                    return await BonusService.register_customer(
-                        conn,
-                        phone=norm_phone,
-                        full_name=full_name or "Client",
-                        telegram_id=telegram_id,
-                    )
-        return None
+        """Знаходить зареєстрованого користувача. Без автореєстрації повертає None, якщо користувач не зареєстрований."""
+        return await BonusService.find_user_by_phone_or_tg(conn, phone=phone, telegram_id=telegram_id)
 
     @staticmethod
     async def spend_bonuses(
