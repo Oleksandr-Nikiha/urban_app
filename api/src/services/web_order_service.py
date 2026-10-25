@@ -152,13 +152,20 @@ async def create_web_order(
             units = [float(o["price_delta"]) for o in g_opts]
             eff_free = g_opts[0]["free_count"] * it.qty
             extra_cost += options_cost(units, eff_free)
+
+            # Агрегуємо однакові опції (група, назва, дельта), підраховуючи сумарний qty
+            opt_counts: dict[tuple[str, str, float], int] = {}
             for o in g_opts:
+                key = (o["group_name"], o["option_name"], float(o["price_delta"]))
+                opt_counts[key] = opt_counts.get(key, 0) + 1
+
+            for (gname, oname, pdelta), count in opt_counts.items():
                 item_options.append(
                     {
-                        "option_group_name": o["group_name"],
-                        "name": o["option_name"],
-                        "price_delta": float(o["price_delta"]),
-                        "qty": 1,
+                        "option_group_name": gname,
+                        "name": oname,
+                        "price_delta": pdelta,
+                        "qty": count,
                     }
                 )
 

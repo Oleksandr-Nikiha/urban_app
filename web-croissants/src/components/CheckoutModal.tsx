@@ -199,7 +199,7 @@ export function CheckoutModal({
       variant_id: i.variant.id,
       qty: i.qty,
       option_variant_ids: i.selectedOptions.flatMap((o) =>
-        Array(Math.max(1, o.qty || 1)).fill(o.option.variant_id),
+        Array(Math.max(1, o.qty || 1) * i.qty).fill(o.option.variant_id),
       ),
     }));
 

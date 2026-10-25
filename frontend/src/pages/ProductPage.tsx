@@ -86,7 +86,11 @@ export function ProductPage() {
     // Для груп з одним товаром і безкоштовною квотою (наприклад, Васабі, Імбир)
     // за замовчуванням підставляємо включену безкоштовну кількість
     if (group.items.length === 1 && group.free_count > 0) {
-      return { [group.items[0].variant_id]: group.free_count * qty };
+      const q = Math.min(group.free_count, group.max_select || group.free_count);
+      return { [group.items[0].variant_id]: q * qty };
+    }
+    if (group.min_select === 1 && group.max_select === 1 && group.items.length > 0) {
+      return { [group.items[0].variant_id]: 1 * qty };
     }
     return {};
   };

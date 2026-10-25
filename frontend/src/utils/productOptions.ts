@@ -73,6 +73,99 @@ export function chipStyle(active: boolean): React.CSSProperties {
   };
 }
 
+export interface GroupOptionItemPricing {
+  variant_id: number;
+  name: string;
+  price_delta: number;
+  selectedQty: number;
+  freeQty: number;
+  paidQty: number;
+  effectiveCost: number;
+  isFullyFree: boolean;
+  hasFreeQuotaRemaining: boolean;
+}
+
+export interface GroupCalculationResult {
+  extraCost: number;
+  totalSelectedUnits: number;
+  itemsPricing: Record<number, GroupOptionItemPricing>;
+  isValid: boolean;
+}
+
+/**
+ * Розраховує вартість та розбивку безкоштовних/платних одиниць для групи з урахуванням кількості товару (qty).
+ * Сортує порції за ціною за спаданням: перші free порцій — БЕЗКОШТОВНІ (0 ₴).
+ */
+export function calculateGroupPricing(
+  group: OptionGroup,
+  picks: Picks,
+  qty: number = 1
+): GroupCalculationResult {
+  const totalSelectedUnits = unitsIn(picks);
+  const { min, max, free: freeQuota } = effectiveLimits(group, qty);
+
+  const portions: { variant_id: number; price: number }[] = [];
+  for (const item of group.items) {
+    const count = picks[item.variant_id] || 0;
+    for (let i = 0; i < count; i++) {
+      portions.push({ variant_id: item.variant_id, price: item.price_delta });
+    }
+  }
+
+  // Сортуємо найдорожчі першими для максимальної вигоди клієнта
+  portions.sort((a, b) => b.price - a.price);
+
+  const freePortions = portions.slice(0, freeQuota);
+  const paidPortions = portions.slice(freeQuota);
+
+  const freeCountByVid: Record<number, number> = {};
+  for (const p of freePortions) {
+    freeCountByVid[p.variant_id] = (freeCountByVid[p.variant_id] || 0) + 1;
+  }
+
+  const paidCountByVid: Record<number, number> = {};
+  for (const p of paidPortions) {
+    paidCountByVid[p.variant_id] = (paidCountByVid[p.variant_id] || 0) + 1;
+  }
+
+  const extraCost = paidPortions.reduce((sum, p) => sum + p.price, 0);
+
+  const itemsPricing: Record<number, GroupOptionItemPricing> = {};
+  const remainingFreeSlots = Math.max(0, freeQuota - totalSelectedUnits);
+
+  for (const item of group.items) {
+    const vid = item.variant_id;
+    const priceDelta = item.price_delta;
+    const selectedQty = picks[vid] || 0;
+    const freeQty = freeCountByVid[vid] || 0;
+    const paidQty = paidCountByVid[vid] || 0;
+    const effectiveCost = paidQty * priceDelta;
+
+    itemsPricing[vid] = {
+      variant_id: vid,
+      name: item.name,
+      price_delta: priceDelta,
+      selectedQty,
+      freeQty,
+      paidQty,
+      effectiveCost,
+      isFullyFree: selectedQty > 0 && paidQty === 0,
+      hasFreeQuotaRemaining: remainingFreeSlots > 0 || priceDelta === 0,
+    };
+  }
+
+  const isValid =
+    (min === 0 || totalSelectedUnits >= min) &&
+    (max === 0 || totalSelectedUnits <= max);
+
+  return {
+    extraCost,
+    totalSelectedUnits,
+    itemsPricing,
+    isValid,
+  };
+}
+
 export interface RawOptionItem {
   option_group_name: string;
   option_name: string;

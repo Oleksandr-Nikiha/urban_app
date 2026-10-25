@@ -1,6 +1,7 @@
 import type { OptionGroup } from "@/api/types";
 import { formatPrice } from "@/components/ui";
 import {
+  calculateGroupPricing,
   chipStyle,
   effectiveLimits,
   isFixed,
@@ -37,6 +38,7 @@ export function ProductOptionGroups({
         const isUnfilled = !fixed && currentUnits < effMin;
         const isFilled = !fixed && effMin > 0 && currentUnits >= effMin;
         const isUrgentNotice = isUnfilled && showErrors;
+        const groupPricing = calculateGroupPricing(group, picks, qty);
 
         return (
           <div
@@ -100,6 +102,7 @@ export function ProductOptionGroups({
               <div className="space-y-2">
                 {group.items.map((item) => {
                   const count = picks[item.variant_id] ?? 0;
+                  const itemPricing = groupPricing.itemsPricing[item.variant_id];
                   return (
                     <div
                       key={item.variant_id}
@@ -112,11 +115,23 @@ export function ProductOptionGroups({
                       <span className={`flex-1 text-sm ${count ? "font-semibold" : ""}`}>
                         {item.name}
                       </span>
-                      {item.price_delta > 0 && (
+                      {itemPricing?.isFullyFree ? (
+                        <span className="text-xs font-bold text-emerald-500">
+                          Безкоштовно
+                        </span>
+                      ) : itemPricing && itemPricing.selectedQty > 0 && itemPricing.paidQty > 0 && itemPricing.freeQty > 0 ? (
+                        <span className="text-xs font-medium opacity-75">
+                          +{formatPrice(itemPricing.effectiveCost)}
+                        </span>
+                      ) : itemPricing?.hasFreeQuotaRemaining && item.price_delta > 0 ? (
+                        <span className="text-xs font-semibold text-emerald-500">
+                          0 ₴ (включено)
+                        </span>
+                      ) : item.price_delta > 0 ? (
                         <span className="text-xs font-medium opacity-65">
                           +{formatPrice(item.price_delta)}
                         </span>
-                      )}
+                      ) : null}
                       <div
                         className="flex items-center gap-1.5 rounded-lg px-1 py-0.5"
                         style={{ background: "var(--app-surface-2)" }}
@@ -124,8 +139,8 @@ export function ProductOptionGroups({
                         <button
                           onClick={() => onChangeQty(group, item.variant_id, -1)}
                           disabled={count === 0}
-                          className="app-press h-7 w-7 text-base font-bold disabled:opacity-20 flex items-center justify-center rounded-lg"
                           aria-label={`Менше: ${item.name}`}
+                          className="app-press h-7 w-7 text-base font-bold disabled:opacity-20 flex items-center justify-center rounded-lg"
                         >
                           −
                         </button>
@@ -146,6 +161,7 @@ export function ProductOptionGroups({
               <div className="flex flex-wrap items-center gap-2">
                 {group.items.map((item) => {
                   const active = Boolean(picks[item.variant_id]);
+                  const itemPricing = groupPricing.itemsPricing[item.variant_id];
                   return (
                     <button
                       key={item.variant_id}
@@ -162,9 +178,17 @@ export function ProductOptionGroups({
                         </span>
                       )}
                       <span>{item.name}</span>
-                      {item.price_delta > 0 && (
+                      {active && itemPricing?.isFullyFree ? (
+                        <span className="ml-2 text-[11px] font-bold text-emerald-400">
+                          (включено)
+                        </span>
+                      ) : !active && itemPricing?.hasFreeQuotaRemaining && item.price_delta > 0 ? (
+                        <span className="ml-2 text-[11px] font-bold text-emerald-500">
+                          0 ₴
+                        </span>
+                      ) : item.price_delta > 0 ? (
                         <span className="ml-2 opacity-75">+{formatPrice(item.price_delta)}</span>
-                      )}
+                      ) : null}
                     </button>
                   );
                 })}

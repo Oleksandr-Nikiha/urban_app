@@ -432,7 +432,7 @@ async def create_pos_order(
                                 "option_group_name": c["info"]["group_name"],
                                 "option_name": c["info"]["option_name"],
                                 "price_delta": float(c["info"]["price_delta"]),
-                                "qty": c["qty"],
+                                "qty": c["qty"] * it.qty,
                             }
                         )
 
@@ -787,7 +787,7 @@ async def add_items_to_pos_order(
                                 "option_group_name": c["info"]["group_name"],
                                 "option_name": c["info"]["option_name"],
                                 "price_delta": float(c["info"]["price_delta"]),
-                                "qty": c["qty"],
+                                "qty": c["qty"] * it.qty,
                             }
                         )
 
