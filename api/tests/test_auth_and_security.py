@@ -625,7 +625,9 @@ class TestSecurityVulnerabilityFixes:
     ):
         """Перевірка автостискання та конвертації растрового зображення у WebP (до 1200x1200px)."""
         import io
+
         from PIL import Image
+
         from src.auth.admin_token import create_admin_token
 
         monkeypatch.setenv("UPLOADS_DIR", str(tmp_path))
