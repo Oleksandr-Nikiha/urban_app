@@ -1,0 +1,106 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 800" width="100%" height="100%">
+  <defs>
+    <style>
+      .bg { fill: #12161A; }
+      .line-cashmere { stroke: #F4F5F7; stroke-width: 8; stroke-linecap: round; stroke-linejoin: round; fill: none; }
+      .line-gold { stroke: #F59E0B; stroke-width: 8; stroke-linecap: round; stroke-linejoin: round; fill: none; }
+      .fill-gold { fill: #F59E0B; }
+      .fill-cashmere { fill: #F4F5F7; }
+      .glow { filter: drop-shadow(0px 0px 8px rgba(245, 158, 11, 0.8)); }
+      .text-title { font-family: 'Montserrat', 'Inter', 'Helvetica Neue', Arial, sans-serif; font-weight: 800; font-size: 38px; fill: #F4F5F7; letter-spacing: 5px; text-anchor: middle; }
+      .text-sub { font-family: 'Montserrat', 'Inter', 'Helvetica Neue', Arial, sans-serif; font-weight: 700; font-size: 34px; fill: #F4F5F7; letter-spacing: 7px; text-anchor: middle; }
+      .text-amp { font-family: 'Playfair Display', Georgia, serif; font-style: italic; font-weight: 600; font-size: 28px; fill: #F59E0B; text-anchor: middle; }
+    </style>
+  </defs>
+
+  <!-- Background -->
+  <rect width="800" height="800" class="bg" />
+
+  <!-- Outer Ring Elements -->
+  <circle cx="400" cy="400" r="350" stroke="#F4F5F7" stroke-width="10" fill="none" />
+  <circle cx="400" cy="400" r="332" stroke="#F59E0B" stroke-width="4" fill="none" class="glow" />
+
+  <!-- Central Horizontal Banner Separation -->
+  <line x1="80" y1="365" x2="720" y2="365" class="line-cashmere" stroke-width="10" />
+  <line x1="80" y1="465" x2="720" y2="465" class="line-cashmere" stroke-width="10" />
+
+  <!-- Typography in Central Band -->
+  <rect x="80" y="370" width="640" height="90" fill="#12161A" />
+  <text x="400" y="415" class="text-title">URBAN BITES</text>
+  <text x="320" y="448" class="text-amp">&amp;</text>
+  <text x="480" y="450" class="text-sub">CLUB</text>
+
+  <!-- TOP HALF: Cloche, Skyscrapers & Network Nodes -->
+  <!-- Top Vertical Divider -->
+  <line x1="400" y1="60" x2="400" y2="365" class="line-cashmere" stroke-width="8" />
+
+  <!-- Left: Gourmet Cloche & Architectural Facade -->
+  <path d="M 220 280 A 60 60 0 0 1 340 280 Z" class="line-gold" stroke-width="7" />
+  <line x1="205" y1="285" x2="355" y2="285" class="line-cashmere" stroke-width="8" />
+  <circle cx="280" cy="215" r="7" class="fill-gold glow" />
+
+  <!-- Futuristic building outlines on left -->
+  <path d="M 230 190 L 320 190 L 320 130 L 230 190" class="line-cashmere" stroke-width="6" />
+  <line x1="245" y1="165" x2="300" y2="165" class="line-gold" stroke-width="4" />
+
+  <!-- Center & Right: High-rise towers + Connected Network (Ecosystem) -->
+  <path d="M 380 365 L 380 180 L 430 110 L 430 365" class="line-cashmere" stroke-width="8" />
+  <path d="M 430 200 L 490 140 L 490 365" class="line-gold" stroke-width="8" />
+  <path d="M 490 230 L 550 190 L 550 365" class="line-cashmere" stroke-width="8" />
+
+  <!-- Tech / Loyalty Network Nodes (Glow) -->
+  <g class="glow">
+    <line x1="490" y1="140" x2="560" y2="170" class="line-gold" stroke-width="5" />
+    <line x1="560" y1="170" x2="625" y2="150" class="line-gold" stroke-width="5" />
+    <line x1="560" y1="170" x2="590" y2="240" class="line-gold" stroke-width="5" />
+    <line x1="430" y1="260" x2="510" y2="280" class="line-gold" stroke-width="5" />
+    
+    <circle cx="490" cy="140" r="10" class="fill-gold" />
+    <circle cx="560" cy="170" r="12" class="fill-gold" />
+    <circle cx="625" cy="150" r="10" class="fill-gold" />
+    <circle cx="590" cy="240" r="9" class="fill-gold" />
+    <circle cx="430" cy="260" r="9" class="fill-gold" />
+    <circle cx="510" cy="280" r="11" class="fill-gold" />
+  </g>
+
+  <!-- Stylized Cutlery on right side -->
+  <path d="M 640 285 L 640 345 M 634 285 L 634 310 M 646 285 L 646 310" class="line-cashmere" stroke-width="4" />
+  <path d="M 665 285 Q 665 320 660 345" class="line-cashmere" stroke-width="5" />
+
+  <!-- BOTTOM HALF: Loyalty Infinity Loop, Nodes & Digital Grid -->
+  <!-- Loyalty Infinity Loop (Center) -->
+  <g class="glow" transform="translate(400, 560)">
+    <path d="M -60 0 C -60 -35 -20 -35 0 0 C 20 35 60 35 60 0 C 60 -35 20 -35 0 0 C -20 35 -60 35 -60 0 Z" class="line-gold" stroke-width="9" />
+  </g>
+
+  <!-- Constellation Nodes & Chip Tracks below Infinity Loop -->
+  <g class="glow">
+    <line x1="330" y1="640" x2="400" y2="600" class="line-gold" stroke-width="5" />
+    <line x1="400" y1="600" x2="470" y2="640" class="line-gold" stroke-width="5" />
+    <line x1="400" y1="600" x2="400" y2="680" class="line-gold" stroke-width="5" />
+    <line x1="280" y1="680" x2="330" y2="640" class="line-gold" stroke-width="5" />
+    <line x1="470" y1="640" x2="520" y2="680" class="line-gold" stroke-width="5" />
+
+    <circle cx="400" cy="600" r="11" class="fill-gold" />
+    <circle cx="330" cy="640" r="10" class="fill-gold" />
+    <circle cx="470" cy="640" r="10" class="fill-gold" />
+    <circle cx="400" cy="680" r="9" class="fill-gold" />
+    <circle cx="280" cy="680" r="10" class="fill-gold" />
+    <circle cx="520" cy="680" r="10" class="fill-gold" />
+  </g>
+
+  <!-- Left: Sleek angled card rays -->
+  <path d="M 210 500 L 310 600" class="line-cashmere" stroke-width="6" />
+  <path d="M 235 480 L 320 565" class="line-cashmere" stroke-width="5" />
+  <path d="M 270 470 L 340 540" class="line-cashmere" stroke-width="4" />
+
+  <!-- Right: Digital Ecosystem Grid / Microchip Pattern -->
+  <path d="M 480 500 L 590 500 L 590 550 L 630 550" class="line-cashmere" stroke-width="6" />
+  <path d="M 520 535 L 560 535 L 560 585 L 610 585" class="line-gold" stroke-width="5" />
+  <circle cx="630" cy="550" r="6" class="fill-cashmere" />
+  <circle cx="610" cy="585" r="5" class="fill-gold glow" />
+
+  <!-- Shield / Crest Point at Bottom -->
+  <path d="M 320 690 L 400 750 L 480 690" class="line-cashmere" stroke-width="8" />
+  <path d="M 350 695 L 400 735 L 450 695" class="line-gold glow" stroke-width="4" />
+</svg>

@@ -6,7 +6,7 @@ import {
 } from "@tanstack/react-query";
 
 import { ApiError, api, hasTelegramAuth, removeUserToken, setUserToken } from "@/api/client";
-import type { BonusTransaction, RegisterPayload, User, UserUpdatePayload } from "@/api/types";
+import type { AdminMe, BonusTransaction, RegisterPayload, User, UserUpdatePayload } from "@/api/types";
 import { keys } from "./keys";
 
 // --- Профіль і автентифікація ---
@@ -88,6 +88,14 @@ export function useMyBonusHistory() {
   return useQuery({
     queryKey: ["me", "bonuses", "history"],
     queryFn: () => api.get<BonusTransaction[]>("/me/bonuses/history"),
+    staleTime: 30_000,
+  });
+}
+
+export function useAdminMe() {
+  return useQuery({
+    queryKey: keys.adminMe,
+    queryFn: () => api.get<AdminMe>("/admin/me"),
     staleTime: 30_000,
   });
 }

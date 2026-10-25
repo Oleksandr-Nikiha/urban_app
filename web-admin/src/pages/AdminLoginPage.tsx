@@ -63,7 +63,7 @@ export function AdminLoginPage() {
         const res = await api.post<AdminTokenResponse>("/admin/auth/telegram-webapp");
         if (res.token) {
           setAdminToken(res.token);
-          navigate("/admin" + window.location.search, { replace: true });
+          navigate("/" + window.location.search, { replace: true });
         }
       } catch (err) {
         if (err instanceof ApiError && err.status === 403) {
@@ -105,7 +105,7 @@ export function AdminLoginPage() {
       const res = await api.post<AdminTokenResponse>("/admin/auth/telegram-widget", user);
       if (res.token) {
         setAdminToken(res.token);
-        navigate("/admin" + window.location.search, { replace: true });
+        navigate("/" + window.location.search, { replace: true });
       }
     } catch (err) {
       setError(
@@ -179,7 +179,7 @@ export function AdminLoginPage() {
         if (res.status === "approved" && res.token) {
           clearInterval(interval);
           setAdminToken(res.token);
-          navigate("/admin" + window.location.search, { replace: true });
+          navigate("/" + window.location.search, { replace: true });
         } else if (res.status === "rejected" || res.status === "expired") {
           clearInterval(interval);
           setError(
@@ -202,7 +202,7 @@ export function AdminLoginPage() {
     const token = manualToken.trim();
     if (!token) return;
     setAdminToken(token);
-    navigate("/admin" + window.location.search, { replace: true });
+    navigate("/" + window.location.search, { replace: true });
   };
 
   const isMobile = isMobileOrTablet();

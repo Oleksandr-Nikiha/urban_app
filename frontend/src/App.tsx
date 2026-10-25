@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect } from "react";
+import { useEffect } from "react";
 import { Navigate, Route, Routes, useLocation, useNavigate } from "react-router-dom";
 
 import { ApiError, getAdminToken } from "@/api/client";
@@ -23,9 +23,14 @@ import {
   isTelegramWebApp,
 } from "@/telegram/env";
 
-// Адмінка важить 150 КБ і потрібна лише персоналу — завантажуємо окремим чанком
-const AdminPage = lazy(() => import("@/pages/AdminPage").then((m) => ({ default: m.AdminPage })));
-const AdminLoginPage = lazy(() => import("@/pages/AdminLoginPage").then((m) => ({ default: m.AdminLoginPage })));
+function AdminRedirect() {
+  useEffect(() => {
+    const search = window.location.search;
+    const hash = window.location.hash;
+    window.location.href = `/urban-bites/admin/${search}${hash}`;
+  }, []);
+  return <Spinner />;
+}
 
 function resolveTargetOrderId(): string | null {
   const startParam = getTelegramStartParam();
@@ -60,7 +65,7 @@ export function App() {
   const targetOrderId = resolveTargetOrderId();
 
   useEffect(() => {
-    if (location.pathname.startsWith("/admin")) {
+    if (isAdminRoute) {
       const sp = getTelegramStartParam();
       if (sp) markStartParamConsumed(sp);
       return;
@@ -79,7 +84,7 @@ export function App() {
       ) {
         markStartParamConsumed();
         if (isStaff) {
-          navigate(`/admin?order_id=${orderId}`, { replace: true });
+          window.location.href = `/urban-bites/admin/?order_id=${orderId}`;
         } else {
           navigate(`/orders/${orderId}/success`, { replace: true });
         }
@@ -105,7 +110,7 @@ export function App() {
       clearInterval(interval);
       clearTimeout(timeout);
     };
-  }, [location.pathname, navigate, isStaff, isAdminMePending, isTg]);
+  }, [location.pathname, navigate, isStaff, isAdminMePending, isTg, isAdminRoute]);
 
   // Якщо передано ID замовлення (через startapp або order_id), ведемо в адмінку (для персоналу) або на екран відстеження (для клієнта)
   if (
@@ -115,12 +120,11 @@ export function App() {
     (!isAdminMePending || !isTg)
   ) {
     markStartParamConsumed();
-    return (
-      <Navigate
-        to={isStaff ? `/admin?order_id=${targetOrderId}` : `/orders/${targetOrderId}/success`}
-        replace
-      />
-    );
+    if (isStaff) {
+      window.location.href = `/urban-bites/admin/?order_id=${targetOrderId}`;
+      return <Spinner />;
+    }
+    return <Navigate to={`/orders/${targetOrderId}/success`} replace />;
   }
 
   // Для адмін-панелі (/admin, /admin/login) не показуємо онбординг або блокувальні екрани клієнта
@@ -135,7 +139,6 @@ export function App() {
           <p className="mt-4 font-medium">Не вдалося підтвердити сесію</p>
           <p className="mt-2 text-sm opacity-60">
             Відкрийте застосунок через кнопку «Меню» в боті Urban Bites.
-
           </p>
           <p className="mt-4 text-xs opacity-40">{error.detail}</p>
         </div>
@@ -158,23 +161,9 @@ export function App() {
         <Route path="/profile" element={<ProfilePage />} />
         <Route path="/orders" element={<OrdersPage />} />
       </Route>
-      {/* Картка товару, чекаут, реєстрація, екран успіху та адмінка — без клієнтської нижньої панелі */}
-      <Route
-        path="/admin/login"
-        element={
-          <Suspense fallback={<Spinner />}>
-            <AdminLoginPage />
-          </Suspense>
-        }
-      />
-      <Route
-        path="/admin"
-        element={
-          <Suspense fallback={<Spinner />}>
-            <AdminPage />
-          </Suspense>
-        }
-      />
+      {/* Картка товару, чекаут, реєстрація, екран успіху — без клієнтської нижньої панелі */}
+      <Route path="/admin/*" element={<AdminRedirect />} />
+      <Route path="/admin" element={<AdminRedirect />} />
       <Route path="/register" element={<RegisterPage />} />
       <Route path="/products/:productId" element={<ProductPage />} />
       <Route path="/checkout" element={<CheckoutPage />} />

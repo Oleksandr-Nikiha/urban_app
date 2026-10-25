@@ -87,12 +87,12 @@ export function AdminPage() {
 
   // Якщо ми у звичайному браузері і немає авторизації адміна — переходимо на екран входу
   if (!isTg && !hasAdminAuth()) {
-    return <Navigate to="/admin/login" replace />;
+    return <Navigate to="/login" replace />;
   }
 
   const handleLogout = () => {
     removeAdminToken();
-    navigate("/admin/login", { replace: true });
+    navigate("/login", { replace: true });
   };
 
   const handleGoToMenu = () => {
@@ -104,7 +104,7 @@ export function AdminPage() {
   if (meError) {
     if (!isTg) {
       removeAdminToken();
-      return <Navigate to="/admin/login" replace />;
+      return <Navigate to="/login" replace />;
     }
     return <ErrorBox message={meError.message} onRetry={() => window.location.reload()} />;
   }
@@ -112,7 +112,7 @@ export function AdminPage() {
   if (!adminMe || !adminMe.is_staff) {
     if (!isTg) {
       removeAdminToken();
-      return <Navigate to="/admin/login" replace />;
+      return <Navigate to="/login" replace />;
     }
     return (
       <div className="flex min-h-screen flex-col items-center justify-center px-6 text-center">

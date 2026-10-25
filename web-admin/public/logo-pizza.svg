@@ -1,0 +1,100 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 800" width="100%" height="100%">
+  <defs>
+    <style>
+      .bg { fill: #FDFBF7; }
+      .line-dark { stroke: #1A1A1A; stroke-width: 8; stroke-linecap: round; stroke-linejoin: round; fill: none; }
+      .line-emerald { stroke: #1E3A2F; stroke-width: 8; stroke-linecap: round; stroke-linejoin: round; fill: none; }
+      .line-terracotta { stroke: #D34528; stroke-width: 8; stroke-linecap: round; stroke-linejoin: round; fill: none; }
+      .fill-terracotta { fill: #D34528; }
+      .fill-emerald { fill: #1E3A2F; }
+      .fill-craft { fill: #FDFBF7; }
+      .fill-dark { fill: #1A1A1A; }
+      .text-title { font-family: 'Montserrat', 'Inter', 'Helvetica Neue', Arial, sans-serif; font-weight: 800; font-size: 42px; fill: #1A1A1A; letter-spacing: 5px; text-anchor: middle; }
+      .text-sub { font-family: 'Montserrat', 'Inter', 'Helvetica Neue', Arial, sans-serif; font-weight: 700; font-size: 32px; fill: #1A1A1A; letter-spacing: 6px; text-anchor: middle; }
+      .text-amp { font-family: 'Playfair Display', Georgia, serif; font-style: italic; font-weight: 600; font-size: 28px; fill: #1A1A1A; text-anchor: middle; }
+    </style>
+  </defs>
+
+  <!-- Background -->
+  <rect width="800" height="800" class="bg" />
+
+  <!-- Outer Ring Elements -->
+  <circle cx="400" cy="400" r="350" stroke="#1A1A1A" stroke-width="10" fill="none" />
+  <circle cx="400" cy="400" r="332" stroke="#1E3A2F" stroke-width="4" fill="none" />
+
+  <!-- Central Horizontal Banner Separation -->
+  <line x1="80" y1="365" x2="720" y2="365" class="line-dark" stroke-width="10" />
+  <line x1="80" y1="465" x2="720" y2="465" class="line-dark" stroke-width="10" />
+
+  <!-- Typography in Central Band -->
+  <rect x="80" y="370" width="640" height="90" fill="#FDFBF7" />
+  <text x="400" y="415" class="text-title">URBAN PIZZA</text>
+  <text x="310" y="448" class="text-amp">&amp;</text>
+  <text x="490" y="450" class="text-sub">SUSHI</text>
+
+  <!-- TOP HALF: Pizza & Urban Skyline -->
+  <line x1="400" y1="60" x2="400" y2="365" class="line-dark" stroke-width="8" />
+
+  <!-- Left: Pizza Slice & Flame -->
+  <path d="M 230 140 L 340 290 L 190 270 Z" class="line-terracotta" stroke-width="8" />
+  <path d="M 220 130 Q 280 120 350 140" class="line-dark" stroke-width="8" />
+  <circle cx="260" cy="200" r="14" class="fill-terracotta" />
+  <circle cx="290" cy="245" r="12" class="fill-terracotta" />
+  <circle cx="230" cy="240" r="10" class="fill-terracotta" />
+  
+  <path d="M 240 335 Q 260 290 280 320 Q 295 285 315 335 Q 275 355 240 335 Z" class="fill-terracotta" />
+
+  <path d="M 140 280 Q 155 200 200 150" class="line-emerald" stroke-width="6" />
+  <ellipse cx="160" cy="230" rx="14" ry="7" transform="rotate(-30 160 230)" class="fill-emerald" />
+  <ellipse cx="180" cy="190" rx="14" ry="7" transform="rotate(-45 180 190)" class="fill-emerald" />
+  <ellipse cx="138" cy="255" rx="14" ry="7" transform="rotate(-15 138 255)" class="fill-emerald" />
+
+  <!-- Right: Urban Skyline & Cutlery -->
+  <path d="M 430 365 L 430 180 L 480 130 L 480 365" class="line-dark" stroke-width="8" />
+  <path d="M 480 200 L 530 160 L 530 365" class="line-terracotta" stroke-width="8" />
+  <path d="M 530 240 L 580 210 L 580 365" class="line-dark" stroke-width="8" />
+  <line x1="455" y1="200" x2="455" y2="340" class="line-terracotta" stroke-width="5" />
+  <line x1="505" y1="220" x2="505" y2="340" class="line-dark" stroke-width="5" />
+  <line x1="555" y1="250" x2="555" y2="340" class="line-emerald" stroke-width="5" />
+
+  <path d="M 615 285 L 615 345 M 607 285 L 607 310 M 623 285 L 623 310" class="line-emerald" stroke-width="4" />
+  <path d="M 645 285 Q 645 320 640 345" class="line-emerald" stroke-width="5" />
+
+  <!-- BOTTOM HALF: Sushi, Chopsticks & Waves -->
+  <path d="M 310 570 L 400 520 L 490 570 L 400 620 Z" class="line-dark" stroke-width="7" fill="#FDFBF7" />
+  <path d="M 310 570 L 310 595 L 400 645 L 490 595 L 490 570" class="line-dark" stroke-width="7" fill="none" />
+
+  <g transform="translate(400, 560)">
+    <ellipse cx="0" cy="0" rx="36" ry="22" class="fill-emerald" stroke="#1A1A1A" stroke-width="5" />
+    <ellipse cx="0" cy="0" rx="22" ry="13" fill="#FDFBF7" />
+    <ellipse cx="0" cy="0" rx="10" ry="6" class="fill-terracotta" />
+  </g>
+  <g transform="translate(345, 525)">
+    <ellipse cx="0" cy="0" rx="30" ry="18" class="fill-emerald" stroke="#1A1A1A" stroke-width="4" />
+    <ellipse cx="0" cy="0" rx="18" ry="10" fill="#FDFBF7" />
+    <ellipse cx="0" cy="0" rx="8" ry="5" class="fill-terracotta" />
+  </g>
+  <g transform="translate(455, 525)">
+    <ellipse cx="0" cy="0" rx="30" ry="18" class="fill-emerald" stroke="#1A1A1A" stroke-width="4" />
+    <ellipse cx="0" cy="0" rx="18" ry="10" fill="#FDFBF7" />
+    <ellipse cx="0" cy="0" rx="8" ry="5" class="fill-terracotta" />
+  </g>
+
+  <!-- Left Bottom: Pizza Segment Patterns -->
+  <path d="M 160 520 Q 230 480 300 530" class="line-terracotta" stroke-width="6" />
+  <circle cx="210" cy="550" r="16" class="fill-terracotta" />
+  <circle cx="260" cy="590" r="12" class="fill-terracotta" />
+  <circle cx="200" cy="630" r="18" class="fill-terracotta" />
+  <path d="M 170 590 Q 240 650 320 670" class="line-dark" stroke-width="6" />
+
+  <!-- Right Bottom: Nigiri & Sea Waves Pattern -->
+  <path d="M 520 520 Q 570 490 620 520 Q 640 550 590 565 Q 530 565 520 520 Z" class="fill-terracotta" stroke="#1A1A1A" stroke-width="5" />
+  <line x1="550" y1="510" x2="575" y2="555" stroke="#FDFBF7" stroke-width="4" stroke-linecap="round" />
+  <line x1="580" y1="510" x2="605" y2="550" stroke="#FDFBF7" stroke-width="4" stroke-linecap="round" />
+  
+  <path d="M 500 600 Q 560 580 620 610" class="line-emerald" stroke-width="6" />
+  <path d="M 480 635 Q 550 610 630 645" class="line-emerald" stroke-width="6" />
+  <path d="M 460 670 Q 540 645 610 680" class="line-emerald" stroke-width="6" />
+
+  <path d="M 340 700 L 400 735 L 460 700" class="line-dark" stroke-width="8" />
+</svg>

@@ -1,0 +1,48 @@
+:80 {
+	root * /srv
+	encode gzip zstd
+
+	header {
+		X-Content-Type-Options nosniff
+		X-Frame-Options SAMEORIGIN
+		Referrer-Policy strict-origin-when-cross-origin
+	}
+
+	# Проксі API у FastAPI контейнер
+	@api path /api /api/*
+	handle @api {
+		request_body {
+			max_size 16MB
+		}
+		reverse_proxy api:8000 {
+			header_up X-Forwarded-For {remote_host}
+			transport http {
+				dial_timeout 5s
+				response_header_timeout 60s
+			}
+		}
+	}
+
+	# Статика Vite та SPA fallback (підтримка як прямого кореню, так і шляху /urban-bites/admin/*)
+	handle_path /urban-bites/admin/* {
+		@assets path /assets/*
+		header @assets Cache-Control "public, max-age=31536000, immutable"
+
+		@index path /index.html
+		header @index Cache-Control "no-cache, no-store, must-revalidate"
+
+		try_files {path} /index.html
+		file_server
+	}
+
+	handle {
+		@assets path /assets/*
+		header @assets Cache-Control "public, max-age=31536000, immutable"
+
+		@index path /index.html
+		header @index Cache-Control "no-cache, no-store, must-revalidate"
+
+		try_files {path} /index.html
+		file_server
+	}
+}

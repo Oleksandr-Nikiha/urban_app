@@ -1,0 +1,140 @@
+@import "tailwindcss";
+
+/* Telegram віддає кольори теми через CSS-змінні на <html> (див. sdk.ts →
+   themeParams.bindCssVars). Він виставляє їх інлайново, тож перебиває все
+   нижче. Тут — значення на випадок, коли теми немає: звичайний браузер,
+   дебаг, старий клієнт. */
+/* Колірна палітра екосистеми Urban Bites
+   Сучасний урбаністичний стиль, теплий теракот, графіт, свіжа випічка та преміальна кава */
+:root {
+  color-scheme: dark !important;
+  --tg-theme-bg-color: #12161A !important;
+  --tg-theme-secondary-bg-color: #1A1F26 !important;
+  --tg-theme-text-color: #F4F5F7 !important;
+  --tg-theme-hint-color: #94A3B8 !important;
+  --tg-theme-link-color: #E05338 !important;
+  --tg-theme-button-color: #D34528 !important;
+  --tg-theme-button-text-color: #FFFFFF !important;
+
+  --app-surface: #1A1F26 !important;
+  --app-surface-2: #242B35 !important;
+  --app-surface-3: #2E3744 !important;
+  --app-border: #2E3744 !important;
+  --app-border-focus: #E05338 !important;
+  --app-skeleton: color-mix(in srgb, currentColor 8%, transparent);
+  --app-veil: rgba(18, 22, 26, 0.88) !important;
+  --app-tint: color-mix(in srgb, var(--tg-theme-button-color) 12%, transparent);
+  --app-tint-hover: color-mix(in srgb, var(--tg-theme-button-color) 20%, transparent);
+  --app-shadow: 0 2px 10px -2px rgba(0, 0, 0, 0.4), 0 8px 24px -6px rgba(0, 0, 0, 0.5);
+  --app-shadow-sm: 0 1px 4px rgba(0, 0, 0, 0.3);
+}
+
+html {
+  background-color: #12161A !important;
+  color-scheme: dark !important;
+}
+
+
+/* Telegram Login Widget — обрізання радіуса без чорних кутів у темній темі */
+iframe[id^="telegram-login"],
+iframe[src*="oauth.telegram.org"] {
+  border-radius: 20px !important;
+  overflow: hidden !important;
+  background-color: transparent !important;
+  color-scheme: light !important;
+  border: none !important;
+}
+
+/* --- Компонування --- */
+
+/* Висота TabBar: py-2 (8px) + іконка text-xl (20px) + gap-0.5 (2px)
+   + підпис text-xs (16px) + py-2 (8px) + border-t (1px) = 55px. */
+:root {
+  --app-tabbar-height: 55px;
+}
+
+body {
+  margin: 0;
+  background: var(--tg-theme-bg-color);
+  color: var(--tg-theme-text-color);
+  font-family: 'Plus Jakarta Sans', system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  min-height: 100dvh;
+}
+
+h1, h2, .font-display {
+  font-family: 'Playfair Display', Georgia, serif;
+}
+
+/* --- Рух --- */
+
+@keyframes app-pop {
+  0% { transform: scale(0.7); }
+  60% { transform: scale(1.14); }
+  100% { transform: scale(1); }
+}
+
+/* Поява блока — зсувом, свідомо БЕЗ opacity.
+   Перевірено на практиці: якщо кадри не йдуть (застиглий компонувальник,
+   вимкнені анімації, невідома браузеру властивість), перехід по opacity
+   лишає елемент на нулі — і контент просто зникає з екрана. Зсув у такому
+   разі дає щонайгірше 8 зайвих пікселів, які ніхто не помітить.
+   Робочий стан задано базовим правилом, @starting-style лише каже, звідки
+   починати рух: не знає браузер такого правила — блок зʼявиться без анімації. */
+.app-rise {
+  transform: none;
+  transition: transform 0.34s cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+
+@starting-style {
+  .app-rise { transform: translateY(8px); }
+}
+
+/* Поява лічильника в кошику — теж лише масштабом, з тієї ж причини. */
+.app-pop { animation: app-pop 0.28s cubic-bezier(0.22, 0.61, 0.36, 1); }
+
+/* Натиск: картка трохи вминається. Дає відчуття кнопки там, де немає
+   нативного :hover — на тачі він марний. */
+.app-press {
+  transition: transform 0.14s ease, opacity 0.14s ease, box-shadow 0.14s ease;
+}
+.app-press:active {
+  transform: scale(0.975);
+  opacity: 0.9;
+}
+
+.app-card {
+  background: var(--app-surface);
+  box-shadow: var(--app-shadow);
+  border: 1px solid var(--app-border);
+}
+
+/* Ефект матового скла з повною підтримкою WebKit (iOS Telegram) */
+.app-glass {
+  background: var(--app-veil);
+  -webkit-backdrop-filter: blur(16px);
+  backdrop-filter: blur(16px);
+}
+
+/* Пульсуючий градієнт для плавного скелетон-завантаження */
+@keyframes app-shimmer {
+  0% { opacity: 0.55; }
+  50% { opacity: 1; }
+  100% { opacity: 0.55; }
+}
+
+.app-shimmer {
+  background: var(--app-skeleton);
+  animation: app-shimmer 1.6s ease-in-out infinite;
+}
+
+/* Люди з увімкненим «зменшити рух» не мають отримувати анімацій узагалі —
+   для частини з них це не естетика, а нудота й мігрень. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-delay: 0ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
