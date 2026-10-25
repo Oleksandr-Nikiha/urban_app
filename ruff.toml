@@ -16,6 +16,8 @@ ignore = [
     # Depends()/Header() у дефолтах аргументів — штатний ідіом FastAPI,
     # без нього не працює вбудований DI. Для цього проєкту це хибне спрацювання.
     "B008",
+    "E501",    # line too long (SQL queries, descriptive texts)
+    "SIM117",  # nested with statements (pool.acquire + conn.transaction idiom)
 ]
 
 [lint.isort]

@@ -21,6 +21,7 @@ from src.routers import (
     delivery_addresses,
     locations,
     orders,
+    pos,
     users,
     web_auth,
 )
@@ -154,6 +155,7 @@ app.include_router(users.router)
 app.include_router(web_auth.router)
 app.include_router(cart.router)
 app.include_router(orders.router)
+app.include_router(pos.router)
 app.include_router(locations.router)
 app.include_router(delivery_addresses.router)
 app.include_router(admin.router)

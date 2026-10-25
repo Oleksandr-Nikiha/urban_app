@@ -11,8 +11,8 @@ interface AdminMobileNavProps {
   selectedLocationId: number | null;
   locations: Location[];
   isTelegram: boolean;
-  onSelectSection: (section: AdminSection) => void;
-  onSelectTab: (tab: AdminTab) => void;
+  onSelectSection?: (section: AdminSection) => void;
+  onSelectTab: ((tab: AdminTab) => void) | ((section: AdminSection, tab: AdminTab) => void);
   onSelectLocation: (id: number | null) => void;
   onGoToMenu: () => void;
   onLogout: () => void;
@@ -33,6 +33,14 @@ export function AdminMobileNav({
   onGoToMenu,
   onLogout,
 }: AdminMobileNavProps) {
+  const handleSelectTab = (tab: AdminTab, section: AdminSection = activeSection) => {
+    haptic("light");
+    if (onSelectTab.length >= 2) {
+      (onSelectTab as (section: AdminSection, tab: AdminTab) => void)(section, tab);
+    } else {
+      (onSelectTab as (tab: AdminTab) => void)(tab);
+    }
+  };
   return (
     <div className="md:hidden px-4 pt-3">
       <div className="flex items-center justify-between gap-2">
@@ -56,7 +64,7 @@ export function AdminMobileNav({
               <span>До меню</span>
             </button>
           )}
-          <h1 className="text-xl font-bold tracking-tight truncate">Адмін-панель</h1>
+          <h1 className="text-base sm:text-xl font-bold tracking-tight truncate">Адмін-панель</h1>
         </div>
         <div className="flex items-center gap-1.5 shrink-0">
           <div className="flex flex-col items-end gap-0.5 text-right">
@@ -92,14 +100,14 @@ export function AdminMobileNav({
           <button
             onClick={() => {
               haptic("light");
-              onSelectSection("operations");
+              onSelectSection?.("operations");
               if (
                 activeTab === "users" ||
                 activeTab === "managers" ||
                 activeTab === "analytics" ||
                 activeTab === "broadcasts"
               ) {
-                onSelectTab("orders");
+                handleSelectTab("orders", "operations");
               }
             }}
             className={`app-press rounded-lg py-2 text-center transition-all ${
@@ -116,14 +124,14 @@ export function AdminMobileNav({
           <button
             onClick={() => {
               haptic("light");
-              onSelectSection("management");
+              onSelectSection?.("management");
               if (
                 activeTab !== "users" &&
                 activeTab !== "managers" &&
                 activeTab !== "analytics" &&
                 activeTab !== "broadcasts"
               ) {
-                onSelectTab("analytics");
+                handleSelectTab("analytics", "management");
               }
             }}
             className={`app-press rounded-lg py-2 text-center transition-all ${
@@ -143,23 +151,20 @@ export function AdminMobileNav({
       {/* 2. Підвкладки розділу "Заклад" */}
       {activeSection === "operations" && (
         <div
-          className="mt-2 flex rounded-xl p-1 text-xs font-medium overflow-x-auto no-scrollbar gap-1"
+          className="mt-2 flex rounded-xl p-1 text-xs font-medium overflow-x-auto no-scrollbar gap-1 overscroll-contain touch-pan-x"
           style={{ background: "var(--app-surface-2)" }}
         >
           {[
-            { tab: "orders" as AdminTab, label: "📦 Замовлення", minW: "90px" },
-            { tab: "stoplist" as AdminTab, label: "⛔ Стоп", minW: "70px" },
-            { tab: "delivery" as AdminTab, label: "🛵 Доставка", minW: "80px" },
-            { tab: "catalog" as AdminTab, label: "🍕 Меню", minW: "70px" },
-            { tab: "options" as AdminTab, label: "🧩 Додатки", minW: "75px" },
+            { tab: "orders" as AdminTab, label: "📦 Замовлення" },
+            { tab: "catalog" as AdminTab, label: "🍕 Меню" },
+            { tab: "options" as AdminTab, label: "🥫 Опції" },
+            { tab: "stoplist" as AdminTab, label: "⛔ Стоп" },
+            { tab: "delivery" as AdminTab, label: "🛵 Доставка" },
           ].map((item) => (
             <button
               key={item.tab}
-              onClick={() => {
-                haptic("light");
-                onSelectTab(item.tab);
-              }}
-              className={`app-press flex-1 min-w-[${item.minW}] rounded-lg py-2 text-center transition-all ${
+              onClick={() => handleSelectTab(item.tab, "operations")}
+              className={`app-press flex-1 shrink-0 whitespace-nowrap rounded-lg px-2.5 py-2 text-center transition-all ${
                 activeTab === item.tab ? "shadow-sm font-bold" : "opacity-70"
               }`}
               style={
@@ -183,15 +188,12 @@ export function AdminMobileNav({
           {[
             { tab: "analytics" as AdminTab, label: "📊 Аналітика" },
             { tab: "broadcasts" as AdminTab, label: "📢 Розсилки" },
-            { tab: "users" as AdminTab, label: "👤 Клієнти" },
-            { tab: "managers" as AdminTab, label: "👥 Штат" },
+            { tab: "users" as AdminTab, label: "👥 Клієнти" },
+            { tab: "managers" as AdminTab, label: "👔 Штат" },
           ].map((item) => (
             <button
               key={item.tab}
-              onClick={() => {
-                haptic("light");
-                onSelectTab(item.tab);
-              }}
+              onClick={() => handleSelectTab(item.tab, "management")}
               className={`app-press flex-1 min-w-[75px] rounded-lg py-2 text-center transition-all ${
                 activeTab === item.tab ? "shadow-sm font-bold" : "opacity-70"
               }`}

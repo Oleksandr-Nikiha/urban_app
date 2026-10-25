@@ -1,7 +1,9 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
+import { useQueryClient } from "@tanstack/react-query";
 
 import { useCancelOrder, useCart, useOrder, useRepeatOrder } from "@/api/queries";
+import { keys } from "@/api/queries/keys";
 import { ErrorBox, ScreenTitle, Spinner, formatPrice } from "@/components/ui";
 import { WebHeader } from "@/components/WebHeader";
 import { useBackButton } from "@/hooks/useBackButton";
@@ -18,6 +20,7 @@ export function OrderSuccessPage() {
 
   useBackButton(() => navigate("/"));
 
+  const qc = useQueryClient();
   const { data: order, isPending, error, refetch } = useOrder(id);
   const { data: cart } = useCart();
   const cancelOrder = useCancelOrder();
@@ -76,10 +79,15 @@ export function OrderSuccessPage() {
   useEffect(() => {
     if (!order) return;
     if (prevStatusRef.current && prevStatusRef.current !== order.status) {
+      void qc.invalidateQueries({ queryKey: keys.orders });
+      void qc.invalidateQueries({ queryKey: keys.me });
+      void qc.invalidateQueries({ queryKey: ["auth", "bonusHistory"] });
+
       if (
         order.status === "confirmed" ||
         order.status === "ready" ||
-        order.status === "completed"
+        order.status === "completed" ||
+        order.status === "delivered"
       ) {
         hapticNotify("success");
       } else if (order.status === "rejected" || order.status === "cancelled") {

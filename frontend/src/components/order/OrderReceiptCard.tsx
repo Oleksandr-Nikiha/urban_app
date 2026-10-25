@@ -113,10 +113,24 @@ export function OrderReceiptCard({ order }: OrderReceiptCardProps) {
         className="flex justify-between pt-3 text-sm font-extrabold border-t"
         style={{ borderColor: "var(--app-border)" }}
       >
-        <span>Разом до сплати</span>
-        <span className="text-base text-[var(--tg-theme-button-color)]">
-          {formatPrice(order.total_price)}
-        </span>
+        <div>
+          <span>Разом до сплати</span>
+          {order.bonus_earned && order.bonus_earned > 0 ? (
+            <div className="text-[11px] text-emerald-400 font-semibold mt-0.5">
+              +{order.bonus_earned} бонусів нараховано
+            </div>
+          ) : null}
+        </div>
+        <div className="text-right">
+          <span className="text-base text-[var(--tg-theme-button-color)]">
+            {formatPrice(order.total_price)}
+          </span>
+          {order.bonus_spent && order.bonus_spent > 0 ? (
+            <div className="text-[11px] text-amber-400 font-medium">
+              Оплачено бонусами: -{order.bonus_spent} б.
+            </div>
+          ) : null}
+        </div>
       </div>
     </div>
   );

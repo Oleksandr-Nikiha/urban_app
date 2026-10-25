@@ -546,6 +546,7 @@ export function UserCabinetModal({
               bonuses={profile.bonuses ?? 50}
               phone={profile.phone}
               clientCode={profile.client_code}
+              telegramId={profile.telegram_id}
             />
           ) : (
             <ProfileSettingsTab

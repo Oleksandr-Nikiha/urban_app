@@ -108,7 +108,7 @@ export function CategoryNav({
       ref={navRef}
       data-category-nav="true"
       className="sticky z-30 bg-[#121417]/85 backdrop-blur-md border-b border-white/10 py-2.5 sm:py-3 shadow-lg shadow-black/20"
-      style={{ top: "var(--header-height, 96px)" }}
+      style={{ top: "calc(var(--header-height, 96px) - 1px)" }}
     >
       <div className="max-w-7xl mx-auto px-3 sm:px-6">
         <div className="flex flex-col sm:flex-row sm:items-center gap-2.5 sm:gap-4">

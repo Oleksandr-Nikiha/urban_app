@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 
 import {
   useAdminMe,
@@ -7,6 +8,7 @@ import {
   useOrders,
   useUpdateProfile,
 } from "@/api/queries";
+import { keys } from "@/api/queries/keys";
 import { AdminStaffBanner } from "@/components/profile/AdminStaffBanner";
 import { ClubCard } from "@/components/profile/ClubCard";
 import { GuestAuthSection } from "@/components/profile/GuestAuthSection";
@@ -17,11 +19,24 @@ import { ErrorBox, ScreenTitle, Spinner } from "@/components/ui";
 import { haptic, hapticNotify } from "@/telegram/sdk";
 
 export function ProfilePage() {
+  const qc = useQueryClient();
   const { data: user, isPending, error, refetch } = useMe();
   const { data: adminMe } = useAdminMe();
   const { data: orders } = useOrders();
   const updateProfile = useUpdateProfile();
   const logout = useLogout();
+
+  // Лайв-синхронізація: якщо статус будь-якого замовлення змінився, оновлюємо дані профілю та бонуси
+  const ordersSignature = orders?.map((o) => `${o.id}:${o.status}`).join(",") || "";
+  const prevOrdersSig = useRef(ordersSignature);
+  useEffect(() => {
+    if (prevOrdersSig.current && prevOrdersSig.current !== ordersSignature) {
+      void refetch();
+      void qc.invalidateQueries({ queryKey: keys.me });
+      void qc.invalidateQueries({ queryKey: ["auth", "bonusHistory"] });
+    }
+    prevOrdersSig.current = ordersSignature;
+  }, [ordersSignature, refetch, qc]);
 
   // Витягуємо ім'я та прізвище: спочатку з окремих полів, якщо порожні — парсимо full_name
   const initialFirstName = user?.first_name || user?.full_name?.split(" ")[0] || "";

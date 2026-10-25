@@ -275,6 +275,7 @@ class AdminUserOut(BaseModel):
     is_phone_verified: bool = False
     admin_note: str | None = None
     orders_count: int = 0
+    bonus_balance: int = 0
     created_at: str
 
 
@@ -282,6 +283,9 @@ class AdminUserUpdateIn(BaseModel):
     is_blocked: bool | None = None
     admin_note: str | None = None
     is_phone_verified: bool | None = None
+    bonus_balance: int | None = None
+    bonus_adjustment: int | None = None
+    bonus_adjustment_reason: str | None = None
 
 
 # --- Керування та редагування замовлень (Orders) ---
@@ -301,6 +305,18 @@ class AdminOrderItemIn(BaseModel):
     unit_price: float
     qty: int
     options: list[AdminOrderItemOptionIn] = []
+
+
+class AdminOrderStatusPatchIn(BaseModel):
+    status: str
+    comment: str | None = None
+
+
+class AdminOrderStatusPatchOut(BaseModel):
+    id: int
+    status: str
+    bonus_earned: int = 0
+    bonus_processed: bool = False
 
 
 class AdminOrderUpdateIn(BaseModel):

@@ -15,6 +15,8 @@ class OrderCreateIn(BaseModel):
     payment_method: Literal["cash", "card", "qr"]
     scheduled_time: str | None = Field(None, max_length=50)
     comment: str | None = Field(None, max_length=500)
+    bonus_spent: int = 0
+    bonus_to_spend: int | None = Field(None, ge=0, description="Кількість бонусів для списання")
 
     @model_validator(mode="after")
     def validate_fulfillment(self) -> "OrderCreateIn":
@@ -82,6 +84,7 @@ class WebOrderCreateIn(BaseModel):
     scheduled_time: str | None = Field(None, max_length=50)
     comment: str | None = Field(None, max_length=500)
     source: str = "web_croissants"
+    bonus_spent: int = 0
     items: list[WebOrderItemIn] = Field(..., min_length=1)
 
     @model_validator(mode="after")
@@ -110,6 +113,8 @@ class OrderOut(BaseModel):
     scheduled_time: str | None = None
     comment: str | None = None
     total_price: float
+    bonus_spent: int = 0
+    bonus_earned: int = 0
     created_at: datetime
     source: str = "telegram"
     groups: list[OrderGroupOut] = []

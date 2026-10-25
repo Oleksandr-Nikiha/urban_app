@@ -13,6 +13,7 @@ from src.schemas.order import (
     OrderItemOut,
     OrderOut,
 )
+from src.services.bonus_service import BonusService
 from src.services.order_queries import (
     cancel_user_order,
     fetch_order_by_id,
@@ -232,6 +233,17 @@ class OrderService:
             )
 
         total_order_price = round(total_order_price, 2)
+        bonus_to_spend = payload.bonus_to_spend if payload.bonus_to_spend is not None else payload.bonus_spent
+        user_id = user.get("id")
+        actual_bonus_spent = 0
+        if bonus_to_spend > 0 and user_id:
+            actual_bonus_spent = await BonusService.spend_bonuses(
+                conn=conn,
+                user_id=user_id,
+                order_id=0,
+                bonus_to_spend=min(bonus_to_spend, int(total_order_price)),
+            )
+            total_order_price = max(0.0, round(total_order_price - actual_bonus_spent, 2))
 
         # 5.1 Захист від дублювання замовлень (SEC-2)
         recent_order_id = await conn.fetchval(
@@ -266,9 +278,9 @@ class OrderService:
             INSERT INTO orders (
                 telegram_id, status, fulfillment_type, delivery_address,
                 contact_name, contact_phone, payment_method, scheduled_time,
-                comment, total_price
+                comment, total_price, bonus_spent
             )
-            VALUES ($1, 'pending_moderation', $2, $3, $4, $5, $6, $7, $8, $9)
+            VALUES ($1, 'pending_moderation', $2, $3, $4, $5, $6, $7, $8, $9, $10)
             RETURNING id, created_at
         """
         order_row = await conn.fetchrow(
@@ -282,9 +294,22 @@ class OrderService:
             clean_scheduled_time,
             payload.comment.strip() if payload.comment else None,
             total_order_price,
+            actual_bonus_spent,
         )
         order_id = order_row["id"]
         created_at = order_row["created_at"]
+
+        if actual_bonus_spent > 0 and user_id:
+            await conn.execute(
+                """
+                UPDATE bonus_transactions
+                SET order_id = $1, description = $2
+                WHERE user_id = $3 AND order_id = 0 AND transaction_type = 'order_redemption'
+                """,
+                order_id,
+                f"Списання бонусів на замовлення #{order_id}",
+                user_id,
+            )
 
         group_insert_sql = """
             INSERT INTO order_groups (order_id, location_id, status, subtotal)
@@ -401,6 +426,8 @@ class OrderService:
             scheduled_time=clean_scheduled_time,
             comment=payload.comment,
             total_price=total_order_price,
+            bonus_spent=actual_bonus_spent,
+            bonus_earned=0,
             created_at=created_at,
             groups=[
                 OrderGroupOut(

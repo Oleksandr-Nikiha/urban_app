@@ -15,6 +15,7 @@ export interface WebOrderCreatePayload {
   scheduled_time: string | null;
   comment: string | null;
   source: string;
+  bonus_spent?: number;
   items: WebOrderItemPayload[];
 }
 
@@ -58,6 +59,8 @@ export interface OrderOut {
   scheduled_time: string | null;
   comment: string | null;
   total_price: number;
+  bonus_spent?: number;
+  bonus_earned?: number;
   created_at: string;
   source: string;
   groups: OrderGroupOut[];

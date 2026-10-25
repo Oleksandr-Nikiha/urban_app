@@ -126,6 +126,8 @@ async def fetch_orders_batch(
                 scheduled_time=o["scheduled_time"],
                 comment=o["comment"],
                 total_price=float(o["total_price"]),
+                bonus_spent=int(o.get("bonus_spent") or 0),
+                bonus_earned=int(o.get("bonus_earned") or 0),
                 created_at=o["created_at"],
                 source=o.get("source") or "telegram",
                 groups=groups_by_order.get(o["id"], []),
@@ -143,7 +145,7 @@ async def fetch_order_by_id(
             """
             SELECT id, telegram_id, status, fulfillment_type, delivery_address,
                    contact_name, contact_phone, payment_method, scheduled_time,
-                   comment, total_price, created_at, COALESCE(source, 'telegram') AS source
+                   comment, total_price, bonus_spent, bonus_earned, created_at, COALESCE(source, 'telegram') AS source
             FROM orders
             WHERE id = $1 AND telegram_id = $2
             """,
@@ -155,7 +157,7 @@ async def fetch_order_by_id(
             """
             SELECT id, telegram_id, status, fulfillment_type, delivery_address,
                    contact_name, contact_phone, payment_method, scheduled_time,
-                   comment, total_price, created_at, COALESCE(source, 'telegram') AS source
+                   comment, total_price, bonus_spent, bonus_earned, created_at, COALESCE(source, 'telegram') AS source
             FROM orders
             WHERE id = $1
             """,

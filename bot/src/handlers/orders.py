@@ -10,6 +10,10 @@ from src.keyboards.orders import (
     build_order_keyboard,
     build_time_keyboard,
 )
+from src.utils.bonus_calculator import (
+    process_order_completion_bonuses_bot,
+    refund_order_bonuses_bot,
+)
 from src.utils.order_helpers import (
     GROUP_STATUS_MAP,
     KYIV_TZ,
@@ -124,6 +128,11 @@ async def handle_order_status_change(callback: CallbackQuery) -> None:
             group_status,
             order_id,
         )
+
+        if new_status in ("completed", "delivered"):
+            await process_order_completion_bonuses_bot(conn, order_id)
+        elif new_status in ("rejected", "cancelled"):
+            await refund_order_bonuses_bot(conn, order_id)
 
     # Сповіщення клієнта
     client_msg = get_client_status_message(

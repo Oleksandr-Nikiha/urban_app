@@ -7,9 +7,9 @@ import {
   popup,
   requestContact,
   swipeBehavior,
-  themeParams,
   viewport,
 } from "@telegram-apps/sdk-react";
+import { enforceUrbanTheme, initThemeProtection } from "./themeOverride";
 
 /**
  * Обгортки над SDK, які не падають поза Telegram.
@@ -22,13 +22,7 @@ import {
 let ready = false;
 
 /**
- * Прибирає порожні --tg-theme-* зі стилю <html>.
- *
- * Не всі клієнти Telegram надсилають повний набір параметрів теми (найчастіше
- * бракує secondary_bg_color). SDK усе одно прив'язує змінну — з порожнім
- * значенням. Інлайн перебиває наш дефолт із index.css, а підстановка порожнечі
- * робить усю декларацію background недійсною: на темній темі плашки під
- * текстом просто зникають. Знімаємо такі змінні, щоб спрацював дефолт.
+ * Прибирає сторонні або порожні --tg-theme-* зі стилю <html>.
  */
 function dropEmptyThemeVars(): void {
   const el = document.documentElement;
@@ -45,19 +39,7 @@ function dropEmptyThemeVars(): void {
  * замість стандартного синього кольору Telegram.
  */
 function applyUrbanBrandTheme(): void {
-  const el = document.documentElement;
-  el.style.setProperty("--tg-theme-bg-color", "#12161A");
-  el.style.setProperty("--tg-theme-secondary-bg-color", "#1A1F26");
-  el.style.setProperty("--tg-theme-text-color", "#F4F5F7");
-  el.style.setProperty("--tg-theme-hint-color", "#94A3B8");
-  el.style.setProperty("--tg-theme-link-color", "#E05338");
-  el.style.setProperty("--tg-theme-button-color", "#D34528");
-  el.style.setProperty("--tg-theme-button-text-color", "#FFFFFF");
-  el.style.setProperty("--app-surface", "#1A1F26");
-  el.style.setProperty("--app-surface-2", "#242B35");
-  el.style.setProperty("--app-surface-3", "#2E3744");
-  el.style.setProperty("--app-border", "#2E3744");
-  el.style.setProperty("--app-veil", "rgba(18, 22, 26, 0.88)");
+  enforceUrbanTheme();
 
   try {
     const headerColor = "#12161A";
@@ -72,20 +54,36 @@ function applyUrbanBrandTheme(): void {
 
 
 export function initSdk(): void {
+  // Негайно застосовуємо фірмову колірну схему Urban Bites та вмикаємо захист теми
+  initThemeProtection();
+  applyUrbanBrandTheme();
+
   if (ready) return;
 
   // Сповіщаємо Telegram (як нативний клієнт, так і iframe у web.telegram.org)
   // що застосунок готовий, не чекаючи можливих винятків від sdk-react:
   try {
-    const tg = (window as unknown as { Telegram?: { WebApp?: { ready?: () => void; expand?: () => void } } })
-      ?.Telegram?.WebApp;
+    const tg = (window as unknown as {
+      Telegram?: {
+        WebApp?: {
+          ready?: () => void;
+          expand?: () => void;
+          setHeaderColor?: (c: string) => void;
+          setBackgroundColor?: (c: string) => void;
+        };
+      };
+    })?.Telegram?.WebApp;
     tg?.ready?.();
     tg?.expand?.();
+    tg?.setHeaderColor?.("#12161A");
+    tg?.setBackgroundColor?.("#12161A");
   } catch { /* ignore */ }
   try {
     if (typeof window !== "undefined" && window.parent && window.parent !== window) {
       window.parent.postMessage(JSON.stringify({ eventType: "web_app_ready", eventData: "" }), "*");
       window.parent.postMessage(JSON.stringify({ eventType: "web_app_expand", eventData: "" }), "*");
+      window.parent.postMessage(JSON.stringify({ eventType: "web_app_set_header_color", eventData: { color: "#12161A" } }), "*");
+      window.parent.postMessage(JSON.stringify({ eventType: "web_app_set_background_color", eventData: { color: "#12161A" } }), "*");
     }
   } catch { /* ignore */ }
 
@@ -99,19 +97,11 @@ export function initSdk(): void {
         miniApp.ready();
       }
     } catch { /* ignore */ }
-    // Прив'язка теми та накладання фірмових кольорів Urban Bites
-    try {
-      themeParams.mountSync();
-      themeParams.bindCssVars();
-      dropEmptyThemeVars();
-      applyUrbanBrandTheme();
-      themeParams.state.sub(() => {
-        dropEmptyThemeVars();
-        applyUrbanBrandTheme();
-      });
-    } catch {
-      applyUrbanBrandTheme();
-    }
+    // Застосовуємо виключно фірмову тему Urban Bites.
+    // НЕ викликаємо themeParams.bindCssVars(), оскільки Telegram надсилає сторонні кольори
+    // (синій/блакитний клієнтський дефолт), які перебивають брендинг.
+    dropEmptyThemeVars();
+    applyUrbanBrandTheme();
 
     if (viewport.mount.isAvailable()) {
       void viewport.mount().then(() => {

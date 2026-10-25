@@ -36,7 +36,7 @@ class Settings(BaseSettings):
     # Тип саме str, а не list[str]: для складних типів pydantic-settings намагається
     # розпарсити значення змінної як JSON ще до валідаторів, тож рядок через кому
     # валить застосунок з SettingsError. Розбираємо самі — див. cors_origin_list().
-    cors_origins: str = "http://localhost:5173,http://localhost:5174,http://localhost:5175,http://localhost:5176,http://127.0.0.1:5173,http://127.0.0.1:5174,http://127.0.0.1:5175,http://127.0.0.1:5176"
+    cors_origins: str = "http://localhost:5173,http://localhost:5174,http://localhost:5175,http://localhost:5176,http://localhost:5177,http://127.0.0.1:5173,http://127.0.0.1:5174,http://127.0.0.1:5175,http://127.0.0.1:5176,http://127.0.0.1:5177"
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 

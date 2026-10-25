@@ -29,6 +29,7 @@ function getStepIndex(status: string) {
     case "delivering":
       return 3;
     case "completed":
+    case "delivered":
       return 4;
     default:
       return 0;
@@ -82,9 +83,10 @@ export function OrderStatusCard({
           color: "#8b5cf6",
           bg: "rgba(139, 92, 246, 0.12)",
         };
+      case "delivered":
       case "completed":
         return {
-          text: "Виконано",
+          text: order.status === "delivered" ? "Доставлено" : "Виконано",
           subtitle: "Смачного! Дякуємо, що обираєте Urban Bites.",
           color: "#22c55e",
           bg: "rgba(34, 197, 94, 0.12)",
@@ -125,7 +127,7 @@ export function OrderStatusCard({
   const getStatusEmoji = () => {
     if (order.status === "rejected") return "😔";
     if (order.status === "cancelled") return "🚫";
-    if (order.status === "completed") return "🎉";
+    if (order.status === "completed" || order.status === "delivered") return "🎉";
     if (order.status === "on_the_way" || order.status === "delivering") return "🛵";
     if (order.status === "ready" || order.status === "ready_for_pickup") return "🛍️";
     if (order.status === "in_progress" || order.status === "cooking") return "👨‍🍳";

@@ -1,11 +1,34 @@
+import { useEffect, useState } from "react";
+import { fetchBonusHistory, type BonusTransaction } from "../../api/bonuses.ts";
+
 interface LoyaltyBonusTabProps {
   bonuses: number;
   phone: string;
   clientCode?: string;
+  telegramId?: number | null;
 }
 
-export function LoyaltyBonusTab({ bonuses, phone, clientCode }: LoyaltyBonusTabProps) {
+export function LoyaltyBonusTab({ bonuses, phone, clientCode, telegramId }: LoyaltyBonusTabProps) {
   const botUsername = import.meta.env.VITE_TELEGRAM_BOT_USERNAME || "urban_bites_tst_bot";
+  const [history, setHistory] = useState<BonusTransaction[]>([]);
+  const [loadingHistory, setLoadingHistory] = useState(false);
+
+  useEffect(() => {
+    if (phone || telegramId) {
+      setLoadingHistory(true);
+      fetchBonusHistory({ phone, telegram_id: telegramId })
+        .then(setHistory)
+        .finally(() => setLoadingHistory(false));
+    }
+  }, [phone, telegramId]);
+
+  const tiers = [
+    { range: "50,01 – 100 ₴", percent: "1%", desc: "Базовий перекус або кава" },
+    { range: "100,01 – 700 ₴", percent: "3%", desc: "Щоденні обіди та десерти" },
+    { range: "700,01 – 1 200 ₴", percent: "5%", desc: "Замовлення на двох, піца та сети" },
+    { range: "1 200,01 – 1 800 ₴", percent: "7%", desc: "Компанії та дружні посиденьки" },
+    { range: "Понад 1 800 ₴", percent: "10%", desc: "Максимальний рівень на великі свята" },
+  ];
 
   return (
     <div className="space-y-5 animate-in fade-in duration-150 text-[#F1F5F9]">
@@ -43,18 +66,83 @@ export function LoyaltyBonusTab({ bonuses, phone, clientCode }: LoyaltyBonusTabP
         </div>
       </div>
 
+      {/* Шкала нарахування */}
+      <div className="bg-[#181B22] rounded-2xl p-4 sm:p-5 border border-white/10 space-y-3.5 shadow-2xs">
+        <div className="text-xs font-bold uppercase tracking-wider text-amber-400 pb-1 border-b border-white/10 flex items-center justify-between">
+          <span>Шкала кешбеку URBAN CLUB</span>
+          <span className="text-[10px] text-[#94A3B8] font-normal normal-case">від 50 ₴ у чеку</span>
+        </div>
+
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-xs">
+          {tiers.map((t) => (
+            <div key={t.percent} className="p-2.5 rounded-xl bg-white/5 border border-white/5 flex flex-col justify-between">
+              <span className="text-[11px] text-[#94A3B8]">{t.range}</span>
+              <span className="text-base font-bold text-amber-400 mt-0.5">{t.percent}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Історія бонусів */}
+      <div className="bg-[#181B22] rounded-2xl p-4 sm:p-5 border border-white/10 space-y-3.5 shadow-2xs">
+        <div className="text-xs font-bold uppercase tracking-wider text-amber-400 pb-1 border-b border-white/10 flex items-center justify-between">
+          <span>Історія нарахування та списання</span>
+          {loadingHistory && <span className="text-[10px] text-[#94A3B8] font-normal">Оновлення...</span>}
+        </div>
+
+        {history.length === 0 ? (
+          <div className="text-xs text-[#94A3B8] py-3 text-center">
+            {loadingHistory ? "Завантаження операцій..." : "Історія бонусних операцій поки порожня"}
+          </div>
+        ) : (
+          <div className="space-y-2.5 max-h-60 overflow-y-auto pr-1">
+            {history.map((tx) => (
+              <div
+                key={tx.id}
+                className="flex items-center justify-between p-2.5 rounded-xl bg-white/5 border border-white/5 text-xs"
+              >
+                <div className="space-y-0.5">
+                  <div className="font-semibold text-white">
+                    {tx.description || (tx.amount > 0 ? "Нарахування бонусів" : "Списання бонусів")}
+                  </div>
+                  <div className="text-[10px] text-[#94A3B8]">
+                    {new Date(tx.created_at).toLocaleString("uk-UA", {
+                      day: "2-digit",
+                      month: "2-digit",
+                      year: "numeric",
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })}
+                  </div>
+                </div>
+                <div className="text-right">
+                  <span
+                    className={`text-sm font-bold ${
+                      tx.amount > 0 ? "text-emerald-400" : "text-amber-400"
+                    }`}
+                  >
+                    {tx.amount > 0 ? `+${tx.amount}` : tx.amount} б.
+                  </span>
+                  <div className="text-[10px] text-[#94A3B8]">Залишок: {tx.balance_after}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
       {/* Як накопичувати та витрачати бонуси */}
       <div className="bg-[#181B22] rounded-2xl p-4 sm:p-5 border border-white/10 space-y-3.5 shadow-2xs">
         <div className="text-xs font-bold uppercase tracking-wider text-amber-400 pb-1 border-b border-white/10">
-          Як працює єдина програма лояльності
+          Правила програми
         </div>
 
         <div className="space-y-3 text-xs sm:text-sm text-[#CBD5E1]">
           <div className="flex items-start gap-3">
             <span className="text-xl shrink-0">🎁</span>
             <div>
-              <strong className="text-white block">50 бонусів кожному новому учаснику</strong>
-              Миттєве нарахування 50 вітальних бонусів при першому вході на будь-якому сайті або в боті.
+              <strong className="text-white block">50 вітальних бонусів</strong>
+              Миттєве нарахування 50 бонусів кожному новому учаснику при першому вході.
             </div>
           </div>
 
@@ -62,23 +150,15 @@ export function LoyaltyBonusTab({ bonuses, phone, clientCode }: LoyaltyBonusTabP
             <span className="text-xl shrink-0">💳</span>
             <div>
               <strong className="text-white block">Оплата бонусами до 30%</strong>
-              Розраховуйтесь накопиченими бонусами за піцу, суші, бургери та випічку (до 30% вартості замовлення).
+              Розраховуйтесь накопиченими бонусами за піцу, випічку та напої (до 30% вартості замовлення).
             </div>
           </div>
 
           <div className="flex items-start gap-3">
             <span className="text-xl shrink-0">🔄</span>
             <div>
-              <strong className="text-white block">Кешбек до 7% на єдиний рахунок</strong>
-              Отримуйте від 1% до 7% від вартості кожного виконаного замовлення на свій баланс URBAN CLUB.
-            </div>
-          </div>
-
-          <div className="flex items-start gap-3">
-            <span className="text-xl shrink-0">🛵</span>
-            <div>
-              <strong className="text-white block">Безкоштовна доставка</strong>
-              Замовлення від 250 ₴ доставляються по всьому Києву безкоштовно з будь-якого закладу.
+              <strong className="text-white block">Кешбек від 1% до 10%</strong>
+              Нараховується автоматично після успішного виконання замовлення (від 50 ₴ у чеку).
             </div>
           </div>
         </div>

@@ -11,6 +11,8 @@ import type {
   AdminUserUpdatePayload,
   AnalyticsSummary,
   AnalyticsTopProduct,
+  BonusAnalytics,
+  BonusTransaction,
   Broadcast,
   BroadcastCreatePayload,
   BroadcastRecipientsCount,
@@ -200,7 +202,23 @@ export function useDeleteAdminUser() {
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ["admin", "users"] });
       void qc.invalidateQueries({ queryKey: ["admin", "orders"] });
+      void qc.invalidateQueries({ queryKey: ["admin", "bonusAnalytics"] });
     },
+  });
+}
+
+export function useBonusAnalytics() {
+  return useQuery({
+    queryKey: ["admin", "bonusAnalytics"],
+    queryFn: () => api.get<BonusAnalytics>("/admin/bonuses/analytics"),
+  });
+}
+
+export function useAdminUserBonusHistory(userId: number, enabled: boolean = true) {
+  return useQuery({
+    queryKey: ["admin", "users", userId, "bonusHistory"],
+    queryFn: () => api.get<BonusTransaction[]>(`/admin/users/${userId}/bonus-history`),
+    enabled: enabled && userId > 0,
   });
 }
 

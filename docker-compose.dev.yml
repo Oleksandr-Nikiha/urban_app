@@ -188,3 +188,26 @@ services:
         limits:
           cpus: "1.0"
           memory: 1G
+
+  web-pos:
+    build:
+      context: ./web-pos
+      dockerfile: Dockerfile.dev
+    restart: unless-stopped
+    environment:
+      VITE_API_BASE_URL: ${VITE_API_BASE_URL:-/urban-bites/api}
+    ports:
+      - "5177:5177"
+    volumes:
+      - ./web-pos:/app
+    command: sh -c "[ -d node_modules/vite ] || npm install; npm run dev -- --host 0.0.0.0"
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "20m"
+        max-file: "3"
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 1G
