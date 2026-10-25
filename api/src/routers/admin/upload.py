@@ -21,15 +21,18 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
-ALLOWED_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp", ".gif", ".svg"}
+ALLOWED_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp", ".gif", ".svg", ".heic", ".heif"}
 ALLOWED_CONTENT_TYPES = {
     "image/jpeg",
     "image/png",
     "image/webp",
     "image/gif",
     "image/svg+xml",
+    "image/heic",
+    "image/heif",
+    "application/octet-stream",
 }
-MAX_FILE_SIZE = 15 * 1024 * 1024  # 15 MB
+MAX_FILE_SIZE = 25 * 1024 * 1024  # 25 MB
 
 
 def _get_uploads_dir() -> Path:
@@ -80,6 +83,9 @@ async def upload_image(
 
     uploads_dir = _get_uploads_dir()
 
+    final_width: int | None = None
+    final_height: int | None = None
+
     # Якщо це векторна графіка, GIF-анімація або відсутній модуль Pillow — зберігаємо як є
     if ext in {".svg", ".gif"} or not HAS_PILLOW:
         unique_name = f"{uuid.uuid4().hex[:16]}{ext}"
@@ -88,7 +94,7 @@ async def upload_image(
             await out_file.write(content)
         saved_size = len(content)
     else:
-        # Авто-стиснення та конвертація растрових зображень у сучасний WebP (800-1000px)
+        # Авто-стиснення та конвертація растрових зображень у сучасний WebP (до 1200x1200px Retina)
         unique_name = f"{uuid.uuid4().hex[:16]}.webp"
         file_path = uploads_dir / unique_name
 
@@ -101,11 +107,13 @@ async def upload_image(
             else:
                 img = img.convert("RGB")
 
-            # Зменшуємо до макс. 1000x1000 px зі збереженням пропорцій (ідеально для Retina)
-            img.thumbnail((1000, 1000), Image.Resampling.LANCZOS)
+            # Зменшуємо до макс. 1200x1200 px зі збереженням пропорцій (ідеально для Retina та вебу)
+            img.thumbnail((1200, 1200), Image.Resampling.LANCZOS)
+            final_width, final_height = img.size
 
             out_buf = io.BytesIO()
-            img.save(out_buf, format="WEBP", quality=82, method=6)
+            # method=6 забезпечує найвищу якість оптимізації алгоритму libwebp
+            img.save(out_buf, format="WEBP", quality=84, method=6)
             optimized_bytes = out_buf.getvalue()
 
             async with aiofiles.open(file_path, "wb") as out_file:
@@ -121,15 +129,20 @@ async def upload_image(
 
     public_url = f"/api/uploads/{unique_name}"
     logger.info(
-        "Адміністратор %s успішно завантажив зображення: %s (було: %d б, стало: %d б)",
+        "Адміністратор %s успішно завантажив зображення: %s (було: %d б, стало: %d б, %sx%s)",
         staff["full_name"],
         public_url,
         len(content),
         saved_size,
+        final_width or "?",
+        final_height or "?",
     )
 
     return {
         "url": public_url,
         "filename": unique_name,
         "size": saved_size,
+        "original_size": len(content),
+        "width": final_width,
+        "height": final_height,
     }

@@ -19,6 +19,7 @@ import {
 import { OrderCustomerFields } from "./orderEdit/OrderCustomerFields";
 import { OrderItemsList } from "./orderEdit/OrderItemsList";
 import { AddDishSubmodal } from "./orderEdit/AddDishSubmodal";
+import { OrderSourceBadge } from "../OrderSourceBadge";
 
 export function OrderEditModal({
   orderId,
@@ -329,27 +330,12 @@ export function OrderEditModal({
           <div>
             <div className="flex items-center gap-2">
               <h3 className="text-base font-bold">Зміна замовлення #{order.id}</h3>
-              {order.source === "web_croissants" ? (
-                <span
-                  className="rounded-full px-2 py-0.5 text-[10px] font-bold"
-                  style={{
-                    background: "rgba(200, 130, 62, 0.15)",
-                    color: "#a15914",
-                  }}
-                >
-                  🥐 Веб-сайт
-                </span>
-              ) : (
-                <span
-                  className="rounded-full px-2 py-0.5 text-[10px] font-bold"
-                  style={{
-                    background: "rgba(59, 130, 246, 0.15)",
-                    color: "#2563eb",
-                  }}
-                >
-                  🤖 Telegram
-                </span>
-              )}
+              <OrderSourceBadge
+                source={order.source}
+                tableNumber={order.table_number}
+                staffName={order.staff_name}
+                showDetails
+              />
             </div>
             <p className="text-xs opacity-60">
               {order.fulfillment_type === "delivery" ? "🛵 Доставка" : "🛍️ Самовивіз"} • 📅{" "}

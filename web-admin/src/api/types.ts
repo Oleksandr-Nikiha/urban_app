@@ -580,6 +580,8 @@ export interface AdminOrderListItem {
   user_is_blocked: boolean;
   user_admin_note: string | null;
   source?: string | null;
+  table_number?: number | null;
+  staff_name?: string | null;
 }
 
 export interface AdminOrderDetail {
@@ -600,6 +602,8 @@ export interface AdminOrderDetail {
   user_is_blocked: boolean;
   user_admin_note: string | null;
   source?: string | null;
+  table_number?: number | null;
+  staff_name?: string | null;
   groups: AdminOrderGroup[];
 }
 

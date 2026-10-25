@@ -2,6 +2,7 @@ import { useRef, useState } from "react";
 import { api } from "@/api/client";
 import type { BroadcastSegment } from "@/api/types";
 import { haptic } from "@/telegram/sdk";
+import { compressImageFile } from "@/utils/imageCompression";
 import { SEGMENT_OPTIONS } from "./constants";
 
 interface BroadcastCreateCardProps {
@@ -48,16 +49,17 @@ export function BroadcastCreateCard({
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (file.size > 15 * 1024 * 1024) {
-      setUploadError("Розмір файлу не повинен перевищувати 15 МБ");
+    if (file.size > 25 * 1024 * 1024) {
+      setUploadError("Розмір файлу не повинен перевищувати 25 МБ");
       if (fileInputRef.current) fileInputRef.current.value = "";
       return;
     }
     setIsUploading(true);
     setUploadError(null);
     try {
+      const optimizedFile = await compressImageFile(file);
       const formData = new FormData();
-      formData.append("file", file);
+      formData.append("file", optimizedFile);
       const res = await api.upload<{ url: string }>("/admin/upload", formData);
       setImageUrl(res.url);
     } catch (err: unknown) {
