@@ -620,4 +620,52 @@ class TestSecurityVulnerabilityFixes:
         assert saved_file.exists()
         assert saved_file.read_bytes() == image_bytes
 
+    async def test_admin_upload_image_compression_webp(
+        self, async_client, mock_db_conn, test_bot_token, tmp_path, monkeypatch
+    ):
+        """Перевірка автостискання та конвертації растрового зображення у WebP (до 1200x1200px)."""
+        import io
+        from PIL import Image
+        from src.auth.admin_token import create_admin_token
+
+        monkeypatch.setenv("UPLOADS_DIR", str(tmp_path))
+
+        admin_token = create_admin_token(999, test_bot_token)
+        mock_db_conn.fetchrow.return_value = {
+            "telegram_id": 999,
+            "role": "admin",
+            "location_id": None,
+            "is_active": True,
+            "full_name": "Адмін",
+            "phone": "+380501234567",
+        }
+
+        # Створюємо велике тестове зображення 1600x1200
+        raw_img = Image.new("RGB", (1600, 1200), color=(255, 100, 50))
+        buf = io.BytesIO()
+        raw_img.save(buf, format="JPEG", quality=95)
+        raw_bytes = buf.getvalue()
+
+        files = {"file": ("big_dish_photo.jpg", raw_bytes, "image/jpeg")}
+        res = await async_client.post(
+            "/api/admin/upload",
+            files=files,
+            headers={"X-Admin-Token": admin_token},
+        )
+        assert res.status_code == 200
+        data = res.json()
+        assert data["url"].startswith("/api/uploads/")
+        assert data["filename"].endswith(".webp")
+        assert data["width"] == 1200
+        assert data["height"] == 900
+        assert data["size"] > 0
+        assert data["original_size"] == len(raw_bytes)
+
+        saved_file = tmp_path / data["filename"]
+        assert saved_file.exists()
+        opened = Image.open(saved_file)
+        assert opened.format == "WEBP"
+        assert opened.size == (1200, 900)
+
+
 

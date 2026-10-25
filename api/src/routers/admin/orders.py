@@ -44,6 +44,7 @@ async def list_admin_orders(
                COALESCE(u.is_blocked, false) AS user_is_blocked, u.admin_note AS user_admin_note,
                og.location_id, loc.name AS location_name,
                COALESCE(o.source, 'telegram') AS source,
+               o.table_number, o.staff_name,
                COALESCE(
                    (SELECT string_agg(oi.product_name || ' ×' || oi.qty, ', ')
                     FROM order_items oi
@@ -56,7 +57,7 @@ async def list_admin_orders(
         LEFT JOIN locations loc ON loc.id = og.location_id
         WHERE ($1::text IS NULL OR o.status = $1)
           AND ($2::int IS NULL OR og.location_id = $2)
-        GROUP BY o.id, u.is_blocked, u.admin_note, og.location_id, loc.name
+        GROUP BY o.id, u.is_blocked, u.admin_note, og.location_id, loc.name, o.table_number, o.staff_name
         ORDER BY o.id DESC
         LIMIT $3
     """
@@ -81,7 +82,8 @@ async def get_admin_order(
                    to_char(o.created_at, 'YYYY-MM-DD HH24:MI') AS created_at,
                    COALESCE(u.is_blocked, false) AS user_is_blocked,
                    u.admin_note AS user_admin_note,
-                   COALESCE(o.source, 'telegram') AS source
+                   COALESCE(o.source, 'telegram') AS source,
+                   o.table_number, o.staff_name
             FROM orders o
             LEFT JOIN users u ON u.telegram_id = o.telegram_id
             WHERE o.id = $1

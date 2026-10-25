@@ -9,6 +9,7 @@ import {
   useBulkProductAvailability,
 } from "@/api/queries";
 import { api } from "@/api/client";
+import { compressImageFile } from "@/utils/imageCompression";
 import type { AdminCategory, AdminProduct, AdminVariant, Location } from "@/api/types";
 import { EmptyState, ErrorBox, Spinner } from "@/components/ui";
 import { haptic, hapticNotify } from "@/telegram/sdk";
@@ -138,7 +139,7 @@ export function CatalogTab({
     const file = e.target.files?.[0];
     const prodId = targetProdIdRef.current;
     if (!file || !prodId) return;
-    if (file.size > 10 * 1024 * 1024) {
+    if (file.size > 25 * 1024 * 1024) {
       hapticNotify("error");
       if (catalogFileInputRef.current) catalogFileInputRef.current.value = "";
       targetProdIdRef.current = null;
@@ -146,8 +147,9 @@ export function CatalogTab({
     }
     setUploadingProdId(prodId);
     try {
+      const optimizedFile = await compressImageFile(file);
       const formData = new FormData();
-      formData.append("file", file);
+      formData.append("file", optimizedFile);
       const res = await api.upload<{ url: string }>("/admin/upload", formData);
       await updateProduct.mutateAsync({ productId: prodId, payload: { image_url: res.url } });
       hapticNotify("success");

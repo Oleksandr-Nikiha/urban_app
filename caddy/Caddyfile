@@ -98,6 +98,18 @@
 		}
 	}
 
+	# Веб-панель адміністратора Urban Admin
+	redir /admin /admin/
+	handle /admin/* {
+		reverse_proxy web-admin:80 {
+			header_up Host {host}
+			transport http {
+				dial_timeout 5s
+				response_header_timeout 30s
+			}
+		}
+	}
+
 	# Статика та SPA
 	handle {
 		# Кешування для асетів Vite (хешовані імена на кшталт app.a1b2c3d4.js — незмінні)

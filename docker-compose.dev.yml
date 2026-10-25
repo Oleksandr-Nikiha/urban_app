@@ -211,3 +211,27 @@ services:
         limits:
           cpus: "1.0"
           memory: 1G
+
+  web-admin:
+    build:
+      context: ./web-admin
+      dockerfile: Dockerfile.dev
+    restart: unless-stopped
+    environment:
+      VITE_API_BASE_URL: ${VITE_API_BASE_URL:-/urban-bites/api}
+      VITE_TELEGRAM_BOT_USERNAME: ${BOT_USERNAME:-urban_bites_tst_bot}
+    ports:
+      - "5178:5178"
+    volumes:
+      - ./web-admin:/app
+    command: sh -c "[ -d node_modules/vite ] || npm install; npm run dev -- --host 0.0.0.0"
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "20m"
+        max-file: "3"
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 1G

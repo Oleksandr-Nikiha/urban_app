@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="uk" class="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    <title>Urban Bites — Панель керування</title>
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="theme-color" content="#12161A" />
+    <meta name="color-scheme" content="dark" />
+
+    <!-- Антифлікер стилі для темної теми адмінки -->
+    <style>
+      :root {
+        color-scheme: dark !important;
+        --tg-theme-bg-color: #12161A !important;
+        --tg-theme-secondary-bg-color: #1A1F26 !important;
+        --tg-theme-text-color: #F4F5F7 !important;
+        --tg-theme-hint-color: #94A3B8 !important;
+        --tg-theme-link-color: #E05338 !important;
+        --tg-theme-button-color: #D34528 !important;
+        --tg-theme-button-text-color: #FFFFFF !important;
+        --app-surface: #1A1F26 !important;
+        --app-surface-2: #242B35 !important;
+        --app-surface-3: #2E3744 !important;
+        --app-border: #2E3744 !important;
+        --app-border-focus: #E05338 !important;
+        --app-veil: rgba(18, 22, 26, 0.88) !important;
+      }
+      html, body {
+        background-color: #12161A !important;
+        color: #F4F5F7 !important;
+        color-scheme: dark !important;
+      }
+    </style>
+
+    <!-- Шрифти Urban Bites Brand (Google Fonts) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Playfair+Display:ital,wght@0,600;0,700;1,600&display=swap" rel="stylesheet">
+    
+    <!-- Офіційний скрипт Telegram для підтримки входу через Telegram WebApp -->
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  </head>
+  <body class="bg-[#12161A] text-[#F4F5F7] antialiased">
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

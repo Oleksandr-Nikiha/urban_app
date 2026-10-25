@@ -1,0 +1,16 @@
+# Dev-образ адмін-панелі Urban Admin: Vite-сервер із HMR на порті 5178.
+FROM node:22-alpine
+
+WORKDIR /app
+
+COPY package.json package-lock.json* ./
+RUN npm install
+
+COPY . .
+
+RUN chown -R node:node /app
+USER node
+
+EXPOSE 5178
+
+CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0"]

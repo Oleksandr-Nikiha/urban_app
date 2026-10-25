@@ -3,6 +3,7 @@ import { useAdminOrders, useUpdateAdminOrder } from "@/api/queries";
 import { EmptyState, ErrorBox, Spinner, formatPrice } from "@/components/ui";
 import { haptic } from "@/telegram/sdk";
 import { STATUS_CONFIG } from "./orderStatusConfig";
+import { OrderSourceBadge } from "./OrderSourceBadge";
 import { OrderEditModal } from "./modals/OrderEditModal";
 
 export function OrdersTab({
@@ -121,27 +122,11 @@ export function OrdersTab({
                       >
                         {sc.label}
                       </span>
-                      {o.source === "web_croissants" ? (
-                        <span
-                          className="rounded-full px-2 py-0.5 text-[10px] font-bold"
-                          style={{
-                            background: "rgba(200, 130, 62, 0.15)",
-                            color: "#a15914",
-                          }}
-                        >
-                          🥐 Веб-сайт
-                        </span>
-                      ) : (
-                        <span
-                          className="rounded-full px-2 py-0.5 text-[10px] font-bold"
-                          style={{
-                            background: "rgba(59, 130, 246, 0.15)",
-                            color: "#2563eb",
-                          }}
-                        >
-                          🤖 Telegram
-                        </span>
-                      )}
+                      <OrderSourceBadge
+                        source={o.source}
+                        tableNumber={o.table_number}
+                        staffName={o.staff_name}
+                      />
                       {o.location_name && (
                         <span className="text-[11px] opacity-60">📍 {o.location_name}</span>
                       )}

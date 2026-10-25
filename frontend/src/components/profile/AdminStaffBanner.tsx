@@ -1,15 +1,32 @@
-import { useNavigate } from "react-router-dom";
 import type { AdminMe } from "@/api/types";
 import { haptic } from "@/telegram/sdk";
+import { isTelegramWebApp } from "@/telegram/env";
 
 interface AdminStaffBannerProps {
   adminMe?: AdminMe | null;
 }
 
 export function AdminStaffBanner({ adminMe }: AdminStaffBannerProps) {
-  const navigate = useNavigate();
-
   if (!adminMe?.is_staff) return null;
+
+  const handleOpenAdmin = () => {
+    haptic("light");
+    const adminUrl = "/urban-bites/admin/";
+    if (isTelegramWebApp()) {
+      try {
+        const tg = (window as unknown as {
+          Telegram?: { WebApp?: { openLink?: (url: string) => void } };
+        })?.Telegram?.WebApp;
+        if (tg?.openLink) {
+          tg.openLink(window.location.origin + adminUrl);
+          return;
+        }
+      } catch {
+        /* ignore */
+      }
+    }
+    window.location.href = adminUrl;
+  };
 
   return (
     <section className="app-rise">
@@ -44,10 +61,7 @@ export function AdminStaffBanner({ adminMe }: AdminStaffBannerProps) {
 
           <button
             type="button"
-            onClick={() => {
-              haptic("light");
-              navigate("/admin");
-            }}
+            onClick={handleOpenAdmin}
             className="app-press shrink-0 rounded-xl px-3.5 py-2 text-xs font-bold"
             style={{
               background: "var(--tg-theme-button-color)",
