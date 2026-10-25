@@ -82,6 +82,7 @@ export interface CustomerData {
   first_name?: string | null;
   phone?: string | null;
   bonus_balance: number;
+  orders_count?: number;
 }
 
 export interface PosOrderItemDetail {

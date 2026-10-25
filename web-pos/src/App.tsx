@@ -18,6 +18,7 @@ import { PinLockScreen } from "./components/PinLockScreen";
 import { PosHeader } from "./components/PosHeader";
 import { ProductGrid } from "./components/ProductGrid";
 import { ProductModal } from "./components/ProductModal";
+import { RegisterCustomerModal } from "./components/RegisterCustomerModal";
 import { ShiftModal } from "./components/ShiftModal";
 import type {
   CartItem,
@@ -76,6 +77,8 @@ export function App() {
   const [customerQuery, setCustomerQuery] = useState("");
   const [customer, setCustomer] = useState<CustomerData | null>(null);
   const [bonusSpent, setBonusSpent] = useState<number>(0);
+  const [isRegisterCustomerModalOpen, setIsRegisterCustomerModalOpen] = useState(false);
+  const [registerInitialPhone, setRegisterInitialPhone] = useState("");
 
   // Modals
   const [modalProduct, setModalProduct] = useState<Product | null>(null);
@@ -303,9 +306,6 @@ export function App() {
     try {
       const res = await lookupCustomer(customerQuery);
       setCustomer(res);
-      if (!res.found) {
-        alert("Гостя за таким номером не знайдено");
-      }
     } catch (err) {
       console.error(err);
     }
@@ -542,6 +542,15 @@ export function App() {
                 customerQuery={customerQuery}
                 onCustomerQueryChange={setCustomerQuery}
                 onLookupCustomer={handleLookupCustomer}
+                onOpenRegisterCustomer={(phone) => {
+                  setRegisterInitialPhone(phone || customerQuery || "");
+                  setIsRegisterCustomerModalOpen(true);
+                }}
+                onClearCustomer={() => {
+                  setCustomer(null);
+                  setCustomerQuery("");
+                  setBonusSpent(0);
+                }}
                 bonusSpent={bonusSpent}
                 onToggleBonus={handleToggleBonus}
                 orderComment={orderComment}
@@ -607,6 +616,17 @@ export function App() {
           }}
         />
       )}
+
+      {/* Guest Registration Modal */}
+      <RegisterCustomerModal
+        isOpen={isRegisterCustomerModalOpen}
+        initialPhone={registerInitialPhone}
+        onClose={() => setIsRegisterCustomerModalOpen(false)}
+        onSuccess={(newCust) => {
+          setCustomer(newCust);
+          if (newCust.phone) setCustomerQuery(newCust.phone);
+        }}
+      />
     </div>
   );
 }

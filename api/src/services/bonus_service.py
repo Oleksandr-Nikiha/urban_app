@@ -42,65 +42,130 @@ def calculate_bonus_earned(amount: float) -> int:
 
 class BonusService:
     @staticmethod
+    async def find_user_by_phone_or_tg(
+        conn: asyncpg.Connection,
+        phone: str | None = None,
+        telegram_id: int | None = None,
+    ) -> asyncpg.Record | None:
+        """Знаходить зареєстрованого користувача без створення нового."""
+        if telegram_id:
+            user = await conn.fetchrow("SELECT * FROM users WHERE telegram_id = $1", telegram_id)
+            if user:
+                return user
+
+        if phone:
+            clean_phone = phone.strip()
+            digits = "".join(ch for ch in clean_phone if ch.isdigit())
+            from src.schemas.user import standardize_phone
+
+            norm_phone = standardize_phone(clean_phone) or clean_phone
+
+            return await conn.fetchrow(
+                """
+                SELECT * FROM users 
+                WHERE phone = $1 
+                   OR phone = $2 
+                   OR (length($3) >= 9 AND phone LIKE '%' || $3)
+                LIMIT 1
+                """,
+                norm_phone,
+                clean_phone,
+                digits[-9:] if len(digits) >= 9 else digits,
+            )
+        return None
+
+    @staticmethod
+    async def count_orders_by_phone(
+        conn: asyncpg.Connection,
+        phone: str | None,
+    ) -> int:
+        """Рахує кількість замовлень з цим номером телефону в базі."""
+        if not phone:
+            return 0
+        from src.schemas.user import standardize_phone
+
+        norm_phone = standardize_phone(phone)
+        digits = "".join(ch for ch in phone if ch.isdigit())
+        if not digits or len(digits) < 6:
+            return 0
+        last_digits = digits[-9:] if len(digits) >= 9 else digits
+
+        count = await conn.fetchval(
+            """
+            SELECT COUNT(*) FROM orders
+            WHERE contact_phone = $1
+               OR (length($2) >= 9 AND contact_phone LIKE '%' || $2)
+            """,
+            norm_phone or phone,
+            last_digits,
+        )
+        return int(count or 0)
+
+    @staticmethod
+    async def register_customer(
+        conn: asyncpg.Connection,
+        phone: str,
+        full_name: str = "Client",
+        telegram_id: int | None = None,
+    ) -> asyncpg.Record:
+        """Реєструє клієнта зі стандартизованим номером +380... та 50 вітальними бонусами."""
+        from src.schemas.user import standardize_phone
+
+        norm_phone = standardize_phone(phone)
+        save_phone = norm_phone or phone.strip()
+        name = full_name.strip() if full_name and full_name.strip() else "Client"
+
+        existing = await BonusService.find_user_by_phone_or_tg(conn, phone=save_phone, telegram_id=telegram_id)
+        if existing:
+            return existing
+
+        new_id = await conn.fetchval(
+            """
+            INSERT INTO users (phone, full_name, first_name, telegram_id, bonus_balance, is_phone_verified)
+            VALUES ($1, $2, $3, $4, 50, FALSE)
+            RETURNING id
+            """,
+            save_phone,
+            name,
+            name,
+            telegram_id,
+        )
+        await conn.execute(
+            """
+            INSERT INTO bonus_transactions (user_id, amount, balance_after, transaction_type, description)
+            VALUES ($1, 50, 50, 'welcome', 'Вітальні 50 бонусів URBAN CLUB')
+            """,
+            new_id,
+        )
+        return await conn.fetchrow("SELECT * FROM users WHERE id = $1", new_id)
+
+    @staticmethod
     async def get_or_create_user_for_order(
         conn: asyncpg.Connection,
         phone: str,
         telegram_id: int | None = None,
         full_name: str | None = None,
+        auto_create_min_orders: int = 5,
     ) -> asyncpg.Record | dict[str, Any] | None:
-        """Знаходить або повертає користувача за номером телефону чи telegram_id."""
-        clean_phone = phone.strip() if phone else ""
-        if telegram_id:
-            user = await conn.fetchrow("SELECT * FROM users WHERE telegram_id = $1", telegram_id)
-            if user:
-                return user
-        if clean_phone:
-            # Спробуємо нормалізувати номер до стандарту (+380...)
-            try:
-                from src.schemas.user import normalize_phone
-                norm_phone = normalize_phone(clean_phone)
-            except Exception:
-                norm_phone = clean_phone
+        """Знаходить користувача. Якщо не знайдено — автореєструє лише від 5-го замовлення."""
+        existing = await BonusService.find_user_by_phone_or_tg(conn, phone=phone, telegram_id=telegram_id)
+        if existing:
+            return existing
 
-            # Шукаємо точний збіг або за останніми 9 цифрами
-            digits = "".join(ch for ch in clean_phone if ch.isdigit())
-            user = await conn.fetchrow(
-                """
-                SELECT * FROM users 
-                WHERE phone = $1 
-                   OR phone = $2 
-                   OR phone = $3 
-                   OR (length($4) >= 9 AND phone LIKE '%' || $4)
-                LIMIT 1
-                """,
-                norm_phone,
-                clean_phone,
-                clean_phone.replace("+", ""),
-                digits[-9:] if len(digits) >= 9 else digits,
-            )
-            if user:
-                return user
-            # Створюємо нового користувача з 50 вітальними бонусами (зберігаємо нормалізований номер)
-            save_phone = norm_phone if norm_phone.startswith("+380") else clean_phone
-            new_id = await conn.fetchval(
-                """
-                INSERT INTO users (phone, full_name, telegram_id, bonus_balance, is_phone_verified)
-                VALUES ($1, $2, $3, 50, FALSE)
-                RETURNING id
-                """,
-                save_phone,
-                full_name or "Клієнт",
-                telegram_id,
-            )
-            # Записуємо транзакцію вітальних бонусів
-            await conn.execute(
-                """
-                INSERT INTO bonus_transactions (user_id, amount, balance_after, transaction_type, description)
-                VALUES ($1, 50, 50, 'welcome', 'Вітальні 50 бонусів URBAN CLUB')
-                """,
-                new_id,
-            )
-            return await conn.fetchrow("SELECT * FROM users WHERE id = $1", new_id)
+        # Якщо передано номер телефону, перевіряємо чи настав поріг автореєстрації
+        if phone:
+            from src.schemas.user import standardize_phone
+
+            norm_phone = standardize_phone(phone)
+            if norm_phone:
+                orders_count = await BonusService.count_orders_by_phone(conn, norm_phone)
+                if orders_count >= auto_create_min_orders:
+                    return await BonusService.register_customer(
+                        conn,
+                        phone=norm_phone,
+                        full_name=full_name or "Client",
+                        telegram_id=telegram_id,
+                    )
         return None
 
     @staticmethod

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { closeTableOrder, lookupCustomer } from "../api/client";
 import type { CustomerData, PosOrder } from "../types";
+import { RegisterCustomerModal } from "./RegisterCustomerModal";
 
 interface CloseTableModalProps {
   order: PosOrder;
@@ -18,6 +19,7 @@ export function CloseTableModal({ order, onClose, onSuccess }: CloseTableModalPr
   const [discountPercent, setDiscountPercent] = useState<number>(0);
   const [loading, setLoading] = useState(false);
   const [lookingUp, setLookingUp] = useState(false);
+  const [showRegisterModal, setShowRegisterModal] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   const subtotal = order.total_price;
@@ -127,9 +129,19 @@ export function CloseTableModal({ order, onClose, onSuccess }: CloseTableModalPr
 
           {/* Loyalty Search */}
           <div className="bg-[#0B0D11] border border-white/5 rounded-2xl p-3 space-y-2">
-            <span className="text-[11px] font-bold text-zinc-400 block uppercase tracking-wider">
-              Картка лояльності гостя
-            </span>
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] font-bold text-zinc-400 block uppercase tracking-wider">
+                Картка лояльності гостя
+              </span>
+              <button
+                type="button"
+                onClick={() => setShowRegisterModal(true)}
+                className="text-[11px] font-bold text-amber-400 hover:text-amber-300 cursor-pointer flex items-center space-x-1"
+              >
+                <span>+</span>
+                <span>Реєстрація</span>
+              </button>
+            </div>
             <div className="flex items-center space-x-2">
               <input
                 type="tel"
@@ -154,8 +166,13 @@ export function CloseTableModal({ order, onClose, onSuccess }: CloseTableModalPr
             {customer && customer.found && (
               <div className="pt-2 border-t border-white/5 flex items-center justify-between">
                 <div>
-                  <p className="text-xs font-bold text-emerald-400">
-                    {customer.first_name || "Гість"}
+                  <p className="text-xs font-bold text-emerald-400 flex items-center space-x-1">
+                    <span>{customer.first_name || "Client"}</span>
+                    {customer.orders_count !== undefined && (
+                      <span className="text-[10px] font-normal text-zinc-400">
+                        ({customer.orders_count} зам.)
+                      </span>
+                    )}
                   </p>
                   <p className="text-[10px] text-zinc-400">
                     Баланс: <span className="font-bold text-amber-400">{customer.bonus_balance} ₴</span>
@@ -174,6 +191,29 @@ export function CloseTableModal({ order, onClose, onSuccess }: CloseTableModalPr
                     {bonusSpent > 0 ? `Списано -${bonusSpent} ₴` : "Списати"}
                   </button>
                 )}
+              </div>
+            )}
+
+            {customer && !customer.found && (
+              <div className="pt-2 border-t border-white/5 space-y-1.5">
+                <div className="flex items-center justify-between text-[11px]">
+                  <span className="text-zinc-400">
+                    Не в клубі • <strong className="text-white">{customer.orders_count ?? 0}/5</strong> зам.
+                  </span>
+                  <span className="text-[10px] text-amber-400/90 font-medium">
+                    {customer.orders_count && customer.orders_count >= 5
+                      ? "Буде зареєстровано!"
+                      : `Ще ${Math.max(0, 5 - (customer.orders_count ?? 0))} до автореєстрації`}
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowRegisterModal(true)}
+                  className="w-full py-1.5 px-2 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/40 text-amber-300 font-bold text-[11px] flex items-center justify-center space-x-1 cursor-pointer transition-colors"
+                >
+                  <span>👤➕</span>
+                  <span>Зареєструвати гостя зараз (+50 ₴)</span>
+                </button>
               </div>
             )}
           </div>
@@ -260,6 +300,16 @@ export function CloseTableModal({ order, onClose, onSuccess }: CloseTableModalPr
           </div>
         </div>
       </div>
+
+      <RegisterCustomerModal
+        isOpen={showRegisterModal}
+        initialPhone={customerPhone}
+        onClose={() => setShowRegisterModal(false)}
+        onSuccess={(newCust) => {
+          setCustomer(newCust);
+          if (newCust.phone) setCustomerPhone(newCust.phone);
+        }}
+      />
     </div>
   );
 }

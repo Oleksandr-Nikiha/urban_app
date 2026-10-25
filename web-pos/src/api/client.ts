@@ -48,6 +48,22 @@ export async function lookupCustomer(query: string): Promise<CustomerData> {
   return res.json();
 }
 
+export async function registerCustomer(
+  phone: string,
+  name?: string
+): Promise<{ success: boolean; message: string; customer: CustomerData }> {
+  const res = await fetch(`${API_BASE}/pos/customer/register`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ phone, name: name || "Client" }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ detail: "Помилка реєстрації гостя" }));
+    throw new Error(err.detail || "Не вдалося зареєструвати гостя");
+  }
+  return res.json();
+}
+
 export interface CreateOrderPayload {
   location_id: number;
   fulfillment_type: "dine_in" | "pickup";

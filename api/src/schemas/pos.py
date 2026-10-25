@@ -27,6 +27,18 @@ class PosCustomerLookupOut(BaseModel):
     first_name: str | None = None
     phone: str | None = None
     bonus_balance: int = 0
+    orders_count: int = 0
+
+
+class PosCustomerRegisterIn(BaseModel):
+    phone: str = Field(..., min_length=6, max_length=30)
+    name: str = Field("Client", max_length=100)
+
+
+class PosCustomerRegisterOut(BaseModel):
+    success: bool
+    message: str
+    customer: PosCustomerLookupOut
 
 
 class PosOrderItemIn(BaseModel):

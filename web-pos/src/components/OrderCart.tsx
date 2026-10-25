@@ -14,6 +14,8 @@ interface OrderCartProps {
   customerQuery: string;
   onCustomerQueryChange: (q: string) => void;
   onLookupCustomer: () => void;
+  onOpenRegisterCustomer?: (prefilledPhone?: string) => void;
+  onClearCustomer?: () => void;
   bonusSpent: number;
   onToggleBonus: () => void;
   orderComment: string;
@@ -39,6 +41,8 @@ export function OrderCart({
   customerQuery,
   onCustomerQueryChange,
   onLookupCustomer,
+  onOpenRegisterCustomer,
+  onClearCustomer,
   bonusSpent,
   onToggleBonus,
   orderComment,
@@ -273,30 +277,84 @@ export function OrderCart({
             >
               Знайти
             </button>
+            {onOpenRegisterCustomer && (
+              <button
+                type="button"
+                onClick={() => onOpenRegisterCustomer(customerQuery)}
+                title="Реєстрація нового гостя"
+                className="text-[11px] font-bold px-2 py-1 rounded-lg bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/30 cursor-pointer flex items-center space-x-1 shrink-0"
+              >
+                <span>+</span>
+                <span>Гість</span>
+              </button>
+            )}
           </div>
 
-          {/* Customer result */}
+          {/* Customer result - FOUND */}
           {customer && customer.found && (
             <div className="mt-2 pt-2 border-t border-white/5 flex items-center justify-between">
               <div>
-                <p className="text-xs font-bold text-emerald-400">
-                  {customer.first_name || "Гість"}
+                <p className="text-xs font-bold text-emerald-400 flex items-center space-x-1.5">
+                  <span>{customer.first_name || "Client"}</span>
+                  {customer.orders_count !== undefined && (
+                    <span className="text-[10px] font-normal text-zinc-400">
+                      ({customer.orders_count} зам.)
+                    </span>
+                  )}
                 </p>
                 <p className="text-[10px] text-zinc-400">
                   Бонуси: <span className="font-bold text-amber-400">{customer.bonus_balance} ₴</span>
                 </p>
               </div>
-              {fulfillmentType !== "dine_in" && customer.bonus_balance > 0 && subtotal > 0 && (
+              <div className="flex items-center space-x-1.5">
+                {fulfillmentType !== "dine_in" && customer.bonus_balance > 0 && subtotal > 0 && (
+                  <button
+                    type="button"
+                    onClick={onToggleBonus}
+                    className={`text-[11px] font-bold px-2.5 py-1 rounded-lg border transition-all cursor-pointer ${
+                      bonusSpent > 0
+                        ? "bg-amber-500 border-amber-400 text-black shadow"
+                        : "bg-amber-500/10 border-amber-500/30 text-amber-400 hover:bg-amber-500/20"
+                    }`}
+                  >
+                    {bonusSpent > 0 ? `Списано -${bonusSpent} ₴` : "Списати бонуси"}
+                  </button>
+                )}
+                {onClearCustomer && (
+                  <button
+                    type="button"
+                    onClick={onClearCustomer}
+                    title="Скинути клієнта"
+                    className="text-zinc-500 hover:text-rose-400 text-xs p-1 cursor-pointer"
+                  >
+                    ✕
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Customer result - NOT FOUND */}
+          {customer && !customer.found && (
+            <div className="mt-2 pt-2 border-t border-white/5 flex flex-col space-y-1.5">
+              <div className="flex items-center justify-between text-[11px]">
+                <span className="text-zinc-400">
+                  Не в клубі • <strong className="text-white">{customer.orders_count ?? 0}/5</strong> зам.
+                </span>
+                <span className="text-[10px] text-amber-400/90 font-medium">
+                  {customer.orders_count && customer.orders_count >= 5
+                    ? "Буде зареєстровано!"
+                    : `Ще ${Math.max(0, 5 - (customer.orders_count ?? 0))} до автореєстрації`}
+                </span>
+              </div>
+              {onOpenRegisterCustomer && (
                 <button
                   type="button"
-                  onClick={onToggleBonus}
-                  className={`text-[11px] font-bold px-2.5 py-1 rounded-lg border transition-all cursor-pointer ${
-                    bonusSpent > 0
-                      ? "bg-amber-500 border-amber-400 text-black shadow"
-                      : "bg-amber-500/10 border-amber-500/30 text-amber-400 hover:bg-amber-500/20"
-                  }`}
+                  onClick={() => onOpenRegisterCustomer(customerQuery)}
+                  className="w-full py-1.5 px-2 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/40 text-amber-300 font-bold text-[11px] flex items-center justify-center space-x-1 cursor-pointer transition-colors"
                 >
-                  {bonusSpent > 0 ? `Списано -${bonusSpent} ₴` : "Списати бонуси"}
+                  <span>👤➕</span>
+                  <span>Зареєструвати гостя зараз (+50 ₴)</span>
                 </button>
               )}
             </div>

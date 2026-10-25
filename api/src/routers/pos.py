@@ -13,6 +13,8 @@ from src.schemas.pos import (
     PosAuthOut,
     PosCloseTableIn,
     PosCustomerLookupOut,
+    PosCustomerRegisterIn,
+    PosCustomerRegisterOut,
     PosOrderCancelIn,
     PosOrderCreateIn,
     PosOrderItemUpdateQtyIn,
@@ -22,6 +24,7 @@ from src.schemas.pos import (
     PosShiftOpenIn,
     PosStaffMemberOut,
 )
+from src.schemas.user import standardize_phone
 from src.services.bonus_service import BonusService
 from src.services.telegram_client import send_telegram_message
 
@@ -156,15 +159,67 @@ async def lookup_pos_customer(
             )
 
         if row:
+            orders_cnt = await BonusService.count_orders_by_phone(conn, row["phone"])
             return PosCustomerLookupOut(
                 found=True,
                 telegram_id=row["telegram_id"],
                 first_name=row["first_name"],
                 phone=row["phone"],
                 bonus_balance=row["bonus_balance"],
+                orders_count=orders_cnt,
             )
 
-        return PosCustomerLookupOut(found=False, bonus_balance=0)
+        orders_cnt = await BonusService.count_orders_by_phone(conn, clean_q)
+        return PosCustomerLookupOut(found=False, bonus_balance=0, orders_count=orders_cnt)
+
+
+@router.post("/customer/register", response_model=PosCustomerRegisterOut)
+async def register_pos_customer(
+    payload: PosCustomerRegisterIn,
+    pool: asyncpg.Pool = Depends(get_pool),
+):
+    """Ручна реєстрація гостя за номером телефону та іменем з нарахуванням 50 вітальних бонусів."""
+    norm_phone = standardize_phone(payload.phone)
+    if not norm_phone:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Некоректний номер телефону. Вкажіть дійсний номер (напр. 0501234567 або +380501234567)",
+        )
+
+    clean_name = payload.name.strip() if payload.name and payload.name.strip() else "Client"
+
+    async with pool.acquire() as conn:
+        existing = await BonusService.find_user_by_phone_or_tg(conn, phone=norm_phone)
+        if existing:
+            orders_cnt = await BonusService.count_orders_by_phone(conn, norm_phone)
+            return PosCustomerRegisterOut(
+                success=True,
+                message=f"Клієнт {existing['first_name'] or existing['full_name']} вже зареєстрований",
+                customer=PosCustomerLookupOut(
+                    found=True,
+                    telegram_id=existing["telegram_id"],
+                    first_name=existing["first_name"] or existing["full_name"],
+                    phone=existing["phone"],
+                    bonus_balance=existing["bonus_balance"] or 0,
+                    orders_count=orders_cnt,
+                ),
+            )
+
+        new_user = await BonusService.register_customer(conn, phone=norm_phone, full_name=clean_name)
+        orders_cnt = await BonusService.count_orders_by_phone(conn, norm_phone)
+        logger.info("POS: зареєстровано нового клієнта %s (%s)", clean_name, norm_phone)
+        return PosCustomerRegisterOut(
+            success=True,
+            message=f"Клієнта {clean_name} успішно зареєстровано! Нараховано 50 бонусів.",
+            customer=PosCustomerLookupOut(
+                found=True,
+                telegram_id=new_user["telegram_id"],
+                first_name=new_user["first_name"] or new_user["full_name"],
+                phone=new_user["phone"],
+                bonus_balance=new_user["bonus_balance"] or 50,
+                orders_count=orders_cnt,
+            ),
+        )
 
 
 @router.get("/menu")
@@ -408,16 +463,30 @@ async def create_pos_order(
             discount_amount = round(total_price * (discount_pct / 100.0), 2)
             price_after_discount = max(0.0, total_price - discount_amount)
 
-            # Бонуси списуються одразу тільки при миттєвій оплаті (на виніс)
-            if is_paid and payload.customer_phone:
-                customer_user = await BonusService.get_or_create_user_for_order(
-                    conn,
-                    phone=payload.customer_phone,
-                    full_name=payload.customer_name or "Гість",
-                )
+            # Стандартизація контактного номера телефону (+380...)
+            norm_phone = standardize_phone(payload.customer_phone)
+            saved_phone = norm_phone or (
+                payload.customer_phone.strip()
+                if payload.customer_phone and payload.customer_phone.strip() != "POS"
+                else "POS"
+            )
+            customer_name = payload.customer_name or (
+                f"Стіл {payload.table_number}" if payload.table_number else "Client"
+            )
+
+            # Перевіряємо користувача / автореєстрацію від 5-го замовлення
+            if norm_phone:
+                customer_user = await BonusService.find_user_by_phone_or_tg(conn, phone=norm_phone)
+                past_orders_count = await BonusService.count_orders_by_phone(conn, norm_phone)
+                # Автореєстрація клієнта від 5-го замовлення (поточне замовлення є +1)
+                if not customer_user and (past_orders_count + 1) >= 5:
+                    customer_user = await BonusService.register_customer(
+                        conn, phone=norm_phone, full_name="Client"
+                    )
+
                 if customer_user:
                     customer_tg_id = customer_user.get("telegram_id")
-                    if payload.bonus_spent > 0:
+                    if is_paid and payload.bonus_spent > 0:
                         max_can_spend = min(
                             int(price_after_discount),
                             int(customer_user.get("bonus_balance") or 0),
@@ -446,8 +515,8 @@ async def create_pos_order(
                 """,
                 customer_tg_id,
                 payload.fulfillment_type,
-                payload.customer_name or (f"Стіл {payload.table_number}" if payload.table_number else "Гість"),
-                payload.customer_phone or "POS",
+                customer_name,
+                saved_phone,
                 payload.payment_method,
                 payload.comment,
                 final_total,
@@ -822,8 +891,12 @@ async def close_pos_table_order(
             raise HTTPException(status_code=400, detail="Цей стіл вже розраховано")
 
         current_total = float(order["total_price"])
-        customer_phone = payload.customer_phone or order["contact_phone"]
-        customer_name = payload.customer_name or order["contact_name"]
+        raw_phone = payload.customer_phone or order["contact_phone"]
+        norm_phone = standardize_phone(raw_phone)
+        saved_phone = norm_phone or (
+            raw_phone.strip() if raw_phone and raw_phone.strip() != "POS" else None
+        )
+        customer_name = payload.customer_name or order["contact_name"] or "Client"
 
         # Знижка на замовлення
         discount_pct = payload.discount_percent if payload.discount_percent in (3, 5, 10, 15, 30, 50) else 0
@@ -832,12 +905,15 @@ async def close_pos_table_order(
 
         customer_user = None
         bonus_spent = 0
-        if customer_phone and customer_phone != "POS":
-            customer_user = await BonusService.get_or_create_user_for_order(
-                conn,
-                phone=customer_phone,
-                full_name=customer_name or "Гість",
-            )
+        if norm_phone:
+            customer_user = await BonusService.find_user_by_phone_or_tg(conn, phone=norm_phone)
+            past_orders_count = await BonusService.count_orders_by_phone(conn, norm_phone)
+            # Автореєстрація клієнта від 5-го замовлення
+            if not customer_user and past_orders_count >= 5:
+                customer_user = await BonusService.register_customer(
+                    conn, phone=norm_phone, full_name="Client"
+                )
+
             if customer_user and payload.bonus_spent > 0:
                 max_spend = min(
                     int(price_after_discount),
@@ -862,13 +938,18 @@ async def close_pos_table_order(
             """
                 UPDATE orders
                 SET payment_method = $1, is_paid = true, status = 'completed',
-                    total_price = $2, bonus_spent = $3, discount_percent = $4, updated_at = now()
-                WHERE id = $5
+                    total_price = $2, bonus_spent = $3, discount_percent = $4,
+                    contact_phone = COALESCE($5, contact_phone),
+                    contact_name = COALESCE($6, contact_name),
+                    updated_at = now()
+                WHERE id = $7
                 """,
             payload.payment_method,
             final_total,
             bonus_spent,
             discount_pct,
+            saved_phone,
+            customer_name,
             order_id,
         )
         await conn.execute(
