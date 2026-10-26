@@ -4,8 +4,8 @@ export interface Category {
   icon: string | null;
   parent_id: number | null;
   location_id: number;
+  location_name: string;
   sort_order: number;
-  location_name?: string;
 }
 
 export interface ProductListItem {
@@ -20,7 +20,7 @@ export interface ProductListItem {
 export interface ProductVariant {
   id: number;
   label: string;
-  weight: number | null;
+  weight: string | null;
   price: number;
 }
 

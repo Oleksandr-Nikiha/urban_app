@@ -146,3 +146,97 @@ export interface PosShift {
   notes?: string | null;
   cash_operations?: PosCashOperation[];
 }
+
+// --- Запити та відповіді POS API (відповідність api/src/schemas/pos.py) ---
+
+export interface PosPinAuthPayload {
+  staff_id?: number;
+  pin: string;
+}
+
+export interface PosAuthResponse {
+  token: string;
+  staff: StaffMember;
+}
+
+export type PosCustomerLookupResponse = CustomerData;
+
+export interface PosCustomerRegisterPayload {
+  phone: string;
+  name?: string;
+}
+
+export interface PosCustomerRegisterResponse {
+  success: boolean;
+  message: string;
+  customer: CustomerData;
+}
+
+export interface PosOrderItemPayload {
+  variant_id: number;
+  qty: number;
+  option_variant_ids: number[];
+  comment?: string;
+}
+
+export interface CreateOrderPayload {
+  location_id: number;
+  fulfillment_type: "dine_in" | "pickup";
+  table_number?: string;
+  staff_id?: number;
+  staff_name: string;
+  customer_phone?: string;
+  customer_name?: string;
+  payment_method: "cash" | "card" | "pending";
+  bonus_spent: number;
+  discount_percent?: number;
+  comment?: string;
+  items: PosOrderItemPayload[];
+}
+
+export type PosOrderCreatePayload = CreateOrderPayload;
+
+export interface PosAddItemsPayload {
+  items: PosOrderItemPayload[];
+}
+
+export interface PosCloseTablePayload {
+  payment_method: "cash" | "card";
+  bonus_spent?: number;
+  discount_percent?: number;
+  customer_phone?: string;
+  customer_name?: string;
+}
+
+export interface PosOrderCancelPayload {
+  reason: string;
+  staff_name?: string;
+}
+
+export interface PosOrderItemUpdateQtyPayload {
+  qty: number;
+}
+
+export interface PosShiftOpenPayload {
+  location_id: number;
+  opened_by_id?: number;
+  opened_by_name: string;
+  opening_cash: number;
+  notes?: string;
+}
+
+export interface PosCashOperationPayload {
+  location_id: number;
+  staff_name: string;
+  operation_type: "cash_in" | "cash_out";
+  amount: number;
+  reason: string;
+}
+
+export interface PosShiftClosePayload {
+  location_id: number;
+  closed_by_id?: number;
+  closed_by_name: string;
+  closing_cash_actual: number;
+  notes?: string;
+}

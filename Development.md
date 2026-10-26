@@ -20,6 +20,31 @@ UX замовлення у **Telegram Mini App**, залишивши бота д
 
 **Готово:**
 
+- **Спільні типи та контракти фронтенду (Синхронізація TypeScript-інтерфейсів із бекендом, 2026-10-27):**
+  - **Синхронізація моделей даних з Pydantic v2:**
+    - Уніфіковано типи `ProductVariant.weight`: виправлено тип з `number | null` на `string | null` у `web-croissants`, `web-pizza`, `web-group` відповідно до схеми бекенду `ProductVariantOut.weight: str | None` та формату бази даних (текстові значення ваги/розміру на кшталт `"25 см / 550 г"`).
+    - Оновлено рендеринг ваги у `ProductModal.tsx` та `CartDrawer.tsx` із захистом від подвійного суфіксу (`"25 см / 550 г г"`).
+    - Додано обов'язкове поле `location_name: string` до `Category` у всіх веб-сайтах.
+    - Додано підтримку мультиселекту модифікаторів (`qty?: number`) у `web-group/src/types/cart.ts` (`SelectedOptionWithGroup`).
+  - **Контракти авторизації та користувача:**
+    - Уніфіковано `User.telegram_id` як `number | null` (раніше `number`), що коректно підтримує гостей, POS-клієнтів та веб-профілі.
+    - Розширено `RegisterPayload` полями `first_name` та `last_name` відповідно до `RegisterIn`.
+    - Додано типізовані інтерфейси `UserOut`, `TelegramWidgetAuthPayload`, `PhoneLoginPayload`, `WebProfileUpdatePayload` та `BonusTransaction` у `types/user.ts` сайтів.
+  - **Контракти замовлень та повтору замовлення:**
+    - Розширено `OrderCreatePayload` та `WebOrderCreatePayload` підтримкою бонусних полів `bonus_spent`, `bonus_to_spend` та опціонального `source`.
+    - Синхронізовано `Order` / `OrderOut` полями `source: string` та nullable `telegram_id`.
+    - Додано інтерфейси `RepeatOrderPayload` та `RepeatOrderResponse` у веб-сайти.
+  - **Типізація POS-терміналу (`web-pos`):**
+    - Централізовано та експортовано контракти POS API у `web-pos/src/types/index.ts`: `PosPinAuthPayload`, `PosAuthResponse`, `PosCustomerLookupResponse`, `PosCustomerRegisterPayload`, `PosCustomerRegisterResponse`, `PosOrderItemPayload`, `CreateOrderPayload` (`PosOrderCreatePayload`), `PosAddItemsPayload`, `PosCloseTablePayload`, `PosOrderCancelPayload`, `PosShiftOpenPayload`, `PosCashOperationPayload`, `PosShiftClosePayload`.
+    - Очищено `web-pos/src/api/client.ts` від анонімних інлайн-типів.
+  - **Адмін-панель та TMA:**
+    - Додано поля `table_number?: number | null` та `staff_name?: string | null` в `AdminOrderListItem` та `AdminOrderDetail` у `frontend/src/api/types.ts`.
+    - Позначено застаріле Directus-поле `image` як `@deprecated` на користь `image_url`.
+    - Повністю синхронізовано `frontend/src/api/types.ts` та `web-admin/src/api/types.ts`.
+  - **Автоматизований контроль контрактів:**
+    - Створено валідатор `scripts/check_frontend_contracts.py` для перевірки дотримання спільних контрактів в усіх 6 модулях.
+  - **Верифікація:** успішна компіляція TypeScript (`tsc --noEmit`) та Vite build усіх 6 додатків (`frontend`, `web-admin`, `web-croissants`, `web-pizza`, `web-group`, `web-pos`), 178/178 автотестів бекенду пройдено (100% green).
+
 - **Рефакторинг БД, оптимізація індексів та чистка старих полів (Міграція 0026, 2026-10-27):**
   - **Очищення надлишкових та дублюючих префіксних індексів:**
     - Видалено 7 надлишкових індексів: `idx_orders_telegram_id` (дублікат префіксу `idx_orders_telegram_id_id_desc`), `idx_categories_location` (покривається `idx_categories_listing`), `idx_products_category` (покривається `idx_products_listing`), `idx_variants_product` (покривається `idx_variants_product_sort`), `idx_size_preset_items_preset` (покривається `uq_size_preset_items_preset_label`), `idx_cart_items_cart` (покривається унікальним індексом кошика), `idx_delivery_addresses_city_active` (застарілий на користь функціонального `idx_delivery_addresses_lower_city_active`).

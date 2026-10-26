@@ -1,4 +1,17 @@
-import type { Category, CustomerData, PosOrder, StaffMember } from "../types";
+import type {
+  Category,
+  CreateOrderPayload,
+  CustomerData,
+  PosCashOperationPayload,
+  PosCloseTablePayload,
+  PosOrder,
+  PosOrderItemPayload,
+  PosShiftClosePayload,
+  PosShiftOpenPayload,
+  StaffMember,
+} from "../types";
+
+export type { CreateOrderPayload };
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || "/urban-bites/api";
 
@@ -64,26 +77,6 @@ export async function registerCustomer(
   return res.json();
 }
 
-export interface CreateOrderPayload {
-  location_id: number;
-  fulfillment_type: "dine_in" | "pickup";
-  table_number?: string;
-  staff_id?: number;
-  staff_name: string;
-  customer_phone?: string;
-  customer_name?: string;
-  payment_method: "cash" | "card" | "pending";
-  bonus_spent: number;
-  discount_percent?: number;
-  comment?: string;
-  items: {
-    variant_id: number;
-    qty: number;
-    option_variant_ids: number[];
-    comment?: string;
-  }[];
-}
-
 export async function createPosOrder(payload: CreateOrderPayload) {
   const res = await fetch(`${API_BASE}/pos/orders`, {
     method: "POST",
@@ -110,12 +103,7 @@ export async function toggleItemServed(itemId: number) {
 
 export async function addItemsToOrder(
   orderId: number,
-  items: {
-    variant_id: number;
-    qty: number;
-    option_variant_ids: number[];
-    comment?: string;
-  }[]
+  items: PosOrderItemPayload[]
 ) {
   const res = await fetch(`${API_BASE}/pos/orders/${orderId}/items`, {
     method: "POST",
@@ -131,13 +119,7 @@ export async function addItemsToOrder(
 
 export async function closeTableOrder(
   orderId: number,
-  payload: {
-    payment_method: "cash" | "card";
-    bonus_spent?: number;
-    discount_percent?: number;
-    customer_phone?: string;
-    customer_name?: string;
-  }
+  payload: PosCloseTablePayload
 ) {
   const res = await fetch(`${API_BASE}/pos/orders/${orderId}/close-table`, {
     method: "POST",
@@ -208,13 +190,7 @@ export async function fetchCurrentShift(locationId: number) {
   return res.json();
 }
 
-export async function openPosShift(payload: {
-  location_id: number;
-  opened_by_id?: number;
-  opened_by_name: string;
-  opening_cash: number;
-  notes?: string;
-}) {
+export async function openPosShift(payload: PosShiftOpenPayload) {
   const res = await fetch(`${API_BASE}/pos/shifts/open`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -227,13 +203,7 @@ export async function openPosShift(payload: {
   return res.json();
 }
 
-export async function addCashOperation(payload: {
-  location_id: number;
-  staff_name: string;
-  operation_type: "cash_in" | "cash_out";
-  amount: number;
-  reason: string;
-}) {
+export async function addCashOperation(payload: PosCashOperationPayload) {
   const res = await fetch(`${API_BASE}/pos/shifts/cash-op`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -246,13 +216,7 @@ export async function addCashOperation(payload: {
   return res.json();
 }
 
-export async function closePosShift(payload: {
-  location_id: number;
-  closed_by_id?: number;
-  closed_by_name: string;
-  closing_cash_actual: number;
-  notes?: string;
-}) {
+export async function closePosShift(payload: PosShiftClosePayload) {
   const res = await fetch(`${API_BASE}/pos/shifts/close`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },

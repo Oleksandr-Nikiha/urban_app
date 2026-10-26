@@ -259,7 +259,9 @@ export function ProductModal({ productId, onClose }: ProductModalProps) {
                       >
                         <div className="font-bold text-sm text-white">{v.label}</div>
                         <div className="flex items-center justify-between text-xs text-[#94A3B8] mt-1">
-                          {v.weight && <span>{v.weight} г</span>}
+                          {v.weight && (
+                            <span>{/[а-яА-Яa-zA-Z]/.test(v.weight) ? v.weight : `${v.weight} г`}</span>
+                          )}
                           <span className="font-extrabold text-[#E69A38]">{v.price} ₴</span>
                         </div>
                       </button>

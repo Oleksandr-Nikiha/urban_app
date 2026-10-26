@@ -62,7 +62,7 @@ export interface ProductDetail {
 
 export interface User {
   id: number;
-  telegram_id: number;
+  telegram_id?: number | null;
   full_name: string;
   first_name?: string | null;
   last_name?: string | null;
@@ -88,6 +88,8 @@ export interface RegisterPayload {
   full_name: string;
   phone: string;
   delivery_address: string | null;
+  first_name?: string | null;
+  last_name?: string | null;
 }
 
 /** Вибір опції для відправки в кошик. */
@@ -149,6 +151,8 @@ export interface OrderCreatePayload {
   payment_method: "cash" | "card" | "qr";
   scheduled_time?: string | null;
   comment?: string | null;
+  bonus_spent?: number;
+  bonus_to_spend?: number | null;
   items?: Array<{
     variant_id: number;
     qty: number;
@@ -186,9 +190,9 @@ export interface OrderGroup {
 
 export interface Order {
   id: number;
-  telegram_id: number;
+  telegram_id?: number | null;
   status: string;
-  fulfillment_type: "delivery" | "pickup";
+  fulfillment_type: "delivery" | "pickup" | string;
   delivery_address: string | null;
   contact_name: string;
   contact_phone: string;
@@ -199,6 +203,7 @@ export interface Order {
   bonus_spent?: number;
   bonus_earned?: number;
   created_at: string;
+  source?: string;
   groups: OrderGroup[];
 }
 
@@ -316,6 +321,7 @@ export interface AdminProduct {
   location_id?: number | null;
   location_name?: string | null;
   description: string | null;
+  /** @deprecated directus legacy image uuid dropped in migration 0026; use image_url */
   image?: string | null;
   image_url: string | null;
   sort_order: number;
@@ -580,6 +586,8 @@ export interface AdminOrderListItem {
   user_is_blocked: boolean;
   user_admin_note: string | null;
   source?: string | null;
+  table_number?: number | null;
+  staff_name?: string | null;
 }
 
 export interface AdminOrderDetail {
@@ -600,6 +608,8 @@ export interface AdminOrderDetail {
   user_is_blocked: boolean;
   user_admin_note: string | null;
   source?: string | null;
+  table_number?: number | null;
+  staff_name?: string | null;
   groups: AdminOrderGroup[];
 }
 

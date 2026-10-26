@@ -88,7 +88,8 @@ export function CartDrawer({
                     </h4>
                     <div className="text-xs text-[#94A3B8] mt-0.5">
                       {item.variant.label}
-                      {item.variant.weight && ` (${item.variant.weight} г)`}
+                      {item.variant.weight &&
+                        ` (${/[а-яА-Яa-zA-Z]/.test(item.variant.weight) ? item.variant.weight : `${item.variant.weight} г`})`}
                     </div>
                     {item.selectedOptions.length > 0 && (
                       <div className="text-[11px] text-[#E69A38] mt-1 line-clamp-2">

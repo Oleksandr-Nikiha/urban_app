@@ -4,6 +4,7 @@ export interface SelectedOptionWithGroup {
   groupId: number;
   groupName: string;
   option: ProductOptionItem;
+  qty?: number;
 }
 
 export interface CartItem {

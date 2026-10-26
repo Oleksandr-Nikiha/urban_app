@@ -17,6 +17,62 @@ export interface UserProfile {
   isAuthenticated?: boolean;
 }
 
+// --- Синхронізовані контракти API (api/src/schemas/user.py, auth.py, bonus.py) ---
+
+export interface UserOut {
+  id: number;
+  telegram_id: number | null;
+  full_name: string;
+  first_name?: string | null;
+  last_name?: string | null;
+  phone: string;
+  is_phone_verified: boolean;
+  delivery_address: string | null;
+  additional_address?: string | null;
+  client_code?: string | null;
+  bonus_balance: number;
+  bot_username?: string | null;
+  auth_token?: string | null;
+}
+
+export interface TelegramWidgetAuthPayload {
+  id: number;
+  first_name?: string | null;
+  last_name?: string | null;
+  username?: string | null;
+  photo_url?: string | null;
+  auth_date: number;
+  hash: string;
+}
+
+export interface PhoneLoginPayload {
+  phone: string;
+  full_name?: string | null;
+  first_name?: string | null;
+  last_name?: string | null;
+  telegram_id?: number | null;
+}
+
+export interface WebProfileUpdatePayload {
+  telegram_id?: number | null;
+  phone?: string | null;
+  full_name?: string | null;
+  delivery_address?: string | null;
+  additional_address?: string | null;
+  bonus_balance?: number | null;
+}
+
+export interface BonusTransaction {
+  id: number;
+  user_id: number;
+  order_id: number | null;
+  amount: number;
+  balance_after: number;
+  transaction_type: string;
+  description: string | null;
+  created_at: string;
+}
+
 export const USER_PROFILE_STORAGE_KEY = "urban_user_profile_v1";
 export const LEGACY_PROFILE_STORAGE_KEY = "doma_user_profile_v1";
 

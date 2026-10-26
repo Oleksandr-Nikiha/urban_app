@@ -1,20 +1,20 @@
 export interface WebOrderItemPayload {
   variant_id: number;
   qty: number;
-  option_variant_ids: number[];
+  option_variant_ids?: number[];
 }
 
 export interface WebOrderCreatePayload {
   telegram_id?: number | null;
   location_id: number;
   fulfillment_type: "delivery" | "pickup";
-  delivery_address: string | null;
+  delivery_address?: string | null;
   contact_name: string;
   contact_phone: string;
   payment_method: "cash" | "card";
-  scheduled_time: string | null;
-  comment: string | null;
-  source: string;
+  scheduled_time?: string | null;
+  comment?: string | null;
+  source?: string;
   bonus_spent?: number;
   items: WebOrderItemPayload[];
 }
@@ -64,5 +64,17 @@ export interface OrderOut {
   created_at: string;
   source: string;
   groups: OrderGroupOut[];
+}
+
+export interface RepeatOrderPayload {
+  replace_cart?: boolean;
+}
+
+export interface RepeatOrderResponse {
+  added_count: number;
+  unavailable_items: string[];
+  price_changed: boolean;
+  old_total: number;
+  new_total: number;
 }
 
