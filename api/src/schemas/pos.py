@@ -7,7 +7,7 @@ class PosStaffMemberOut(BaseModel):
     id: int
     staff_name: str
     role: str
-    location_id: int | None
+    location_id: int | None = None
     location_name: str | None = None
 
 

@@ -49,7 +49,7 @@ class OrderItemOptionOut(BaseModel):
 
 class OrderItemOut(BaseModel):
     id: int
-    variant_id: int | None
+    variant_id: int | None = None
     product_name: str
     variant_label: str
     unit_price: float

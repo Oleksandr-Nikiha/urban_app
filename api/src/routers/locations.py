@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, Header, Query
 from src.db.connection import get_pool
 from src.middleware.rate_limiter import rate_limiter
 from src.schemas.location import LocationOut
-from src.services.cache import get_cached_json, set_cached_json
+from src.services.location_service import LocationService
 
 router = APIRouter(
     prefix="/api",
@@ -23,27 +23,8 @@ async def list_locations(
     Список закладів для вкладки «Контакти».
     Публічний ендпоінт — не потребує initData, бо контакти доступні всім.
     """
-    cache_key = "catalog:locations"
     should_bypass = bypass_cache or (x_bypass_cache in ("1", "true", "True"))
-
-    if not should_bypass:
-        cached = await get_cached_json(cache_key)
-        if cached is not None:
-            return [LocationOut(**item) for item in cached]
-
-    rows = await pool.fetch(
-        """
-        SELECT id, name, address, phones,
-               is_delivery_enabled,
-               to_char(delivery_start_time, 'HH24:MI') AS delivery_start_time,
-               to_char(delivery_end_time, 'HH24:MI') AS delivery_end_time
-        FROM locations
-        ORDER BY id
-        """
+    return await LocationService.list_locations(
+        conn_or_pool=pool,
+        bypass_cache=should_bypass,
     )
-    result = [LocationOut(**dict(row)) for row in rows]
-
-    if not should_bypass:
-        await set_cached_json(cache_key, [r.model_dump(mode="json") for r in result])
-
-    return result

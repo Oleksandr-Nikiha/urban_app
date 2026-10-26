@@ -5,7 +5,6 @@ from typing import Any
 import asyncpg
 from fastapi import HTTPException, status
 
-from src.routers.cart import options_cost
 from src.schemas.order import (
     OrderCreateIn,
     OrderGroupOut,
@@ -14,10 +13,13 @@ from src.schemas.order import (
     OrderOut,
 )
 from src.services.bonus_service import BonusService
+from src.services.cart_helpers import options_cost
 from src.services.order_queries import (
     cancel_user_order,
     fetch_order_by_id,
     fetch_orders_batch,
+    fetch_user_orders,
+    fetch_web_orders_history,
     repeat_user_order,
 )
 from src.services.order_validation import KYIV_TZ, validate_scheduled_time
@@ -37,6 +39,8 @@ class OrderService:
     cancel_user_order = staticmethod(cancel_user_order)
     repeat_user_order = staticmethod(repeat_user_order)
     create_web_order = staticmethod(create_web_order)
+    fetch_web_orders_history = staticmethod(fetch_web_orders_history)
+    fetch_user_orders = staticmethod(fetch_user_orders)
 
     @staticmethod
     async def create_cart_order(

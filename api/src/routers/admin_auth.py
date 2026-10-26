@@ -6,12 +6,17 @@ from datetime import UTC, datetime, timedelta
 
 import asyncpg
 from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel
 
 from src.auth.deps import get_init_data
 from src.config import get_settings
 from src.db.connection import get_pool
 from src.middleware.rate_limiter import rate_limiter
+from src.schemas.auth import (
+    AdminTokenOut,
+    AuthSessionOut,
+    AuthStatusOut,
+    TelegramWidgetAuthIn,
+)
 from src.services.telegram_client import fetch_bot_username
 
 logger = logging.getLogger(__name__)
@@ -21,6 +26,14 @@ router = APIRouter(
     tags=["admin-auth"],
     dependencies=[Depends(rate_limiter)],
 )
+
+__all__ = [
+    "AuthSessionOut",
+    "AuthStatusOut",
+    "TelegramWidgetAuthIn",
+    "AdminTokenOut",
+    "router",
+]
 
 _cached_bot_username: str | None = None
 
@@ -44,38 +57,6 @@ async def _get_bot_username(bot_token: str) -> str:
     except Exception as e:
         logger.warning("Не вдалося автоматично визначити username бота: %s", e)
     return "urban_bites_tst_bot"
-
-
-class AuthSessionOut(BaseModel):
-    session_id: str
-    bot_url: str
-    tg_url: str | None = None
-    code: str
-    expires_in: int
-
-
-class AuthStatusOut(BaseModel):
-    status: str
-    token: str | None = None
-    error: str | None = None
-
-
-class TelegramWidgetAuthIn(BaseModel):
-    id: int
-    first_name: str | None = None
-    last_name: str | None = None
-    username: str | None = None
-    photo_url: str | None = None
-    auth_date: int
-    hash: str
-
-
-class AdminTokenOut(BaseModel):
-    token: str
-    telegram_id: int
-    name: str | None = None
-    role: str
-    location_id: int | None = None
 
 
 def generate_code() -> str:

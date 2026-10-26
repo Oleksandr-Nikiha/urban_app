@@ -107,36 +107,13 @@ async def get_web_orders_history(
     """
     Отримує історію замовлень для публічного сайту за номером телефону або telegram_id.
     """
-    clean_phone = phone.strip() if phone else None
-    if not clean_phone and not telegram_id:
-        return []
-
-    norm_phone = clean_phone
-    if clean_phone:
-        from src.schemas.user import normalize_phone
-        try:
-            norm_phone = normalize_phone(clean_phone)
-        except Exception:
-            norm_phone = clean_phone
-
     async with pool.acquire() as conn:
-        order_rows = await conn.fetch(
-            """
-            SELECT id, telegram_id, status, fulfillment_type, delivery_address,
-                   contact_name, contact_phone, payment_method, scheduled_time,
-                   comment, total_price, bonus_spent, bonus_earned, created_at, COALESCE(source, 'web') AS source
-            FROM orders
-            WHERE ($1::text IS NOT NULL AND (contact_phone = $1 OR contact_phone = $2))
-               OR ($3::bigint IS NOT NULL AND telegram_id = $3)
-            ORDER BY id DESC
-            LIMIT $4
-            """,
-            clean_phone,
-            norm_phone,
-            telegram_id,
-            limit,
+        return await OrderService.fetch_web_orders_history(
+            conn=conn,
+            phone=phone,
+            telegram_id=telegram_id,
+            limit=limit,
         )
-        return await OrderService.fetch_orders_batch(conn, order_rows)
 
 
 @router.get("/web/{order_id}", response_model=OrderOut)
@@ -197,21 +174,8 @@ async def get_user_orders(
     pool: asyncpg.Pool = Depends(get_pool),
 ):
     """Отримує історію замовлень поточного користувача."""
-    telegram_id = user["telegram_id"]
-
     async with pool.acquire() as conn:
-        order_rows = await conn.fetch(
-            """
-            SELECT id, telegram_id, status, fulfillment_type, delivery_address,
-                   contact_name, contact_phone, payment_method, scheduled_time,
-                   comment, total_price, bonus_spent, bonus_earned, created_at, COALESCE(source, 'telegram') AS source
-            FROM orders
-            WHERE telegram_id = $1
-            ORDER BY id DESC
-            """,
-            telegram_id,
-        )
-        return await OrderService.fetch_orders_batch(conn, order_rows)
+        return await OrderService.fetch_user_orders(conn, user["telegram_id"])
 
 
 @router.get("/{order_id}", response_model=OrderOut)

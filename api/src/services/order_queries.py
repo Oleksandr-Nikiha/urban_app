@@ -4,7 +4,6 @@ import asyncpg
 from fastapi import HTTPException
 
 from src.db.cart_repo import get_or_create_cart_id
-from src.routers.cart import _fetch_cart, build_options_key
 from src.schemas.order import (
     OrderGroupOut,
     OrderItemOptionOut,
@@ -12,6 +11,8 @@ from src.schemas.order import (
     OrderOut,
     RepeatOrderOut,
 )
+from src.services.cart_helpers import build_options_key
+from src.services.cart_service import _fetch_cart
 
 
 async def fetch_orders_batch(
@@ -388,3 +389,62 @@ async def repeat_user_order(
         old_total=old_order_total,
         new_total=current_cart.total,
     )
+
+
+async def fetch_web_orders_history(
+    conn: asyncpg.Connection,
+    phone: str | None = None,
+    telegram_id: int | None = None,
+    limit: int = 25,
+) -> list[OrderOut]:
+    """Отримує історію замовлень для веб-сайту за телефоном або telegram_id."""
+    clean_phone = phone.strip() if phone else None
+    if not clean_phone and not telegram_id:
+        return []
+
+    norm_phone = clean_phone
+    if clean_phone:
+        from src.schemas.user import normalize_phone
+
+        try:
+            norm_phone = normalize_phone(clean_phone)
+        except Exception:
+            norm_phone = clean_phone
+
+    order_rows = await conn.fetch(
+        """
+        SELECT id, telegram_id, status, fulfillment_type, delivery_address,
+               contact_name, contact_phone, payment_method, scheduled_time,
+               comment, total_price, bonus_spent, bonus_earned, created_at, COALESCE(source, 'web') AS source
+        FROM orders
+        WHERE ($1::text IS NOT NULL AND (contact_phone = $1 OR contact_phone = $2))
+           OR ($3::bigint IS NOT NULL AND telegram_id = $3)
+        ORDER BY id DESC
+        LIMIT $4
+        """,
+        clean_phone,
+        norm_phone,
+        telegram_id,
+        limit,
+    )
+    return await fetch_orders_batch(conn, order_rows)
+
+
+async def fetch_user_orders(
+    conn: asyncpg.Connection,
+    telegram_id: int,
+) -> list[OrderOut]:
+    """Отримує історію замовлень авторизованого користувача Telegram."""
+    order_rows = await conn.fetch(
+        """
+        SELECT id, telegram_id, status, fulfillment_type, delivery_address,
+               contact_name, contact_phone, payment_method, scheduled_time,
+               comment, total_price, bonus_spent, bonus_earned, created_at, COALESCE(source, 'telegram') AS source
+        FROM orders
+        WHERE telegram_id = $1
+        ORDER BY id DESC
+        """,
+        telegram_id,
+    )
+    return await fetch_orders_batch(conn, order_rows)
+

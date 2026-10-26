@@ -7,7 +7,7 @@ class CategoryOut(BaseModel):
     icon: str | None = None
     location_id: int
     location_name: str
-    parent_id: int | None
+    parent_id: int | None = None
     sort_order: int = 0
 
 

@@ -3,7 +3,6 @@ from typing import Any
 import asyncpg
 from fastapi import HTTPException, status
 
-from src.routers.cart import options_cost
 from src.schemas.order import (
     OrderGroupOut,
     OrderItemOptionOut,
@@ -12,6 +11,7 @@ from src.schemas.order import (
     WebOrderCreateIn,
 )
 from src.services.bonus_service import BonusService
+from src.services.cart_helpers import options_cost
 from src.services.order_validation import validate_scheduled_time
 
 
