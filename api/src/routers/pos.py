@@ -628,13 +628,7 @@ async def list_pos_orders(
                    o.bonus_spent, COALESCE(o.discount_percent, 0) AS discount_percent,
                    o.comment, o.contact_phone, o.contact_name,
                    o.cancel_reason,
-                   to_char(o.created_at, 'HH24:MI') AS time_str,
-                   COALESCE(
-                       (SELECT string_agg(oi.product_name || ' ×' || oi.qty, ', ')
-                        FROM order_items oi
-                        JOIN order_groups g ON g.id = oi.order_group_id
-                        WHERE g.order_id = o.id), ''
-                   ) AS items_summary
+                   to_char(o.created_at, 'HH24:MI') AS time_str
             FROM orders o
             JOIN order_groups og ON og.order_id = o.id
             WHERE og.location_id = $1
@@ -666,7 +660,9 @@ async def list_pos_orders(
         result = []
         for r in rows:
             d = dict(r)
-            d["items"] = items_by_order.get(r["id"], [])
+            items = items_by_order.get(r["id"], [])
+            d["items"] = items
+            d["items_summary"] = ", ".join(f"{it['product_name']} ×{it['qty']}" for it in items)
             result.append(d)
 
         return result

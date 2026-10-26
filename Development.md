@@ -20,6 +20,22 @@ UX замовлення у **Telegram Mini App**, залишивши бота д
 
 **Готово:**
 
+- **Рефакторинг БД, оптимізація індексів та чистка старих полів (Міграція 0026, 2026-10-27):**
+  - **Очищення надлишкових та дублюючих префіксних індексів:**
+    - Видалено 7 надлишкових індексів: `idx_orders_telegram_id` (дублікат префіксу `idx_orders_telegram_id_id_desc`), `idx_categories_location` (покривається `idx_categories_listing`), `idx_products_category` (покривається `idx_products_listing`), `idx_variants_product` (покривається `idx_variants_product_sort`), `idx_size_preset_items_preset` (покривається `uq_size_preset_items_preset_label`), `idx_cart_items_cart` (покривається унікальним індексом кошика), `idx_delivery_addresses_city_active` (застарілий на користь функціонального `idx_delivery_addresses_lower_city_active`).
+  - **Видалення застарілих полів (Legacy Cleanup):**
+    - Видалено мертве поле `products.image` (UUID) та його індекс `idx_products_image`, що залишилися від видаленого Directus CMS (100% NULL, вся система використовує `image_url` зі стисненими WebP).
+    - Очищено роутери адмінки (`products.py`) від рудиментних приведень `image::text` та оптимізовано маппінг `image` -> `image_url`.
+  - **Нові цільові індекси для прискорення запитів:**
+    - `idx_orders_status_id_desc` (`orders(status, id DESC)`): прискорює адмін-панель та POS при фільтрації замовлень за статусом зі зворотним сортуванням.
+    - `idx_order_groups_loc_order_desc` (`order_groups(location_id, order_id DESC)`): прискорює отримання останніх замовлень закладу в POS та адмінці.
+    - `idx_pos_shifts_opened_by` та `idx_pos_shifts_closed_by` на `pos_shifts`: індекси для foreign keys `managers(id)`.
+    - `idx_pos_cash_ops_location_id` на `pos_cash_operations`: індекс для foreign key `locations(id)`.
+    - `idx_managers_active_pin` на `managers`: частковий індекс для миттєвої авторизації персоналу за PIN-кодом на POS.
+  - **Аудит SQL-запитів:**
+    - Оптимізовано ендпоінт останніх замовлень POS (`GET /api/pos/orders`): усунено важкий корельований підзапит `string_agg` для кожного чека; формування текстового підсумку перенесено на вже вивантажені пакетні позиції чека в пам'яті.
+  - **Верифікація:** міграцію `0026_db_optimization_and_cleanup.sql` успішно застосовано, 178/178 автотестів пройдено (100% green), linter Ruff 0 зауважень, healthcheck API та контейнер `urban_app-api-1` у статусі Up.
+
 - **Рефакторинг API & Сервісного шару FastAPI (Clean / Layered Architecture, 2026-10-27):**
   - **Розділення роутерів та бізнес-сервісів:**
     - `CatalogService` (`src/services/catalog_service.py`): винесено SQL-запити, збирання модифікаторів та керування Redis-кешем для категорій, страв та карток товарів.
