@@ -1,3 +1,5 @@
+export const LAST_ORDER_STORAGE_KEY = "urban_last_order_id";
+
 export interface WebOrderItemPayload {
   variant_id: number;
   qty: number;

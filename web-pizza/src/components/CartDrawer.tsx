@@ -2,11 +2,13 @@ import { getImageUrl } from "../api/client.ts";
 import { useCart } from "../context/CartContext.tsx";
 import { useModalBehavior } from "../hooks/useModalBehavior.ts";
 
-interface CartDrawerProps {
+export interface CartDrawerProps {
   isOpen: boolean;
   onClose: () => void;
   onOpenCheckout: () => void;
   isAuthenticated?: boolean;
+  emptyEmoji?: string;
+  emptySubtitle?: string;
 }
 
 export function CartDrawer({
@@ -14,12 +16,27 @@ export function CartDrawer({
   onClose,
   onOpenCheckout,
   isAuthenticated = false,
+  emptyEmoji,
+  emptySubtitle,
 }: CartDrawerProps) {
   useModalBehavior({ isOpen, onClose });
 
   const { items, totalQty, totalPrice, updateQty, removeItem, clearCart } = useCart();
 
   if (!isOpen) return null;
+
+  const isCroissants =
+    typeof window !== "undefined" &&
+    (window.location.port === "5174" ||
+      window.location.hostname.includes("bakery") ||
+      window.location.hostname.includes("croissant"));
+
+  const resolvedEmptyEmoji = emptyEmoji ?? (isCroissants ? "🥐" : "🍕");
+  const resolvedEmptySubtitle =
+    emptySubtitle ??
+    (isCroissants
+      ? "Оберіть хрусткі круасани, свіжу випічку або спешелті-каву у нашому меню"
+      : "Оберіть гарячу піцу, свіжі роли або соковитий бургер у нашому меню");
 
   return (
     <div className="fixed inset-0 z-50 flex justify-end bg-black/60 backdrop-blur-xs animate-in fade-in duration-200">
@@ -52,20 +69,20 @@ export function CartDrawer({
           {items.length === 0 ? (
             <div className="h-full flex flex-col items-center justify-center text-center p-6 space-y-4 text-[#94A3B8]">
               <div className="w-20 h-20 rounded-full bg-[#181B22] border border-white/10 flex items-center justify-center text-4xl shadow-inner">
-                🍕
+                {resolvedEmptyEmoji}
               </div>
               <div className="space-y-1">
                 <p className="font-display text-lg font-bold text-white">
                   Кошик порожній
                 </p>
                 <p className="text-xs max-w-xs text-[#94A3B8]">
-                  Оберіть гарячу піцу, свіжі роли або соковитий бургер у нашому меню
+                  {resolvedEmptySubtitle}
                 </p>
               </div>
               <button
                 onClick={onClose}
                 type="button"
-                className="bg-[#D34528] hover:bg-[#B34B24] text-white px-5 py-2.5 rounded-xl font-bold text-xs uppercase tracking-wider shadow-sm hover:shadow active:scale-95 transition-all cursor-pointer"
+                className="bg-[var(--brand-primary,#D34528)] hover:opacity-90 text-white px-5 py-2.5 rounded-xl font-bold text-xs uppercase tracking-wider shadow-sm hover:shadow active:scale-95 transition-all cursor-pointer"
               >
                 До меню
               </button>
@@ -92,11 +109,11 @@ export function CartDrawer({
                         ` (${/[а-яА-Яa-zA-Z]/.test(item.variant.weight) ? item.variant.weight : `${item.variant.weight} г`})`}
                     </div>
                     {item.selectedOptions.length > 0 && (
-                      <div className="text-[11px] text-amber-300/90 mt-1 line-clamp-2">
+                      <div className="text-[11px] text-[var(--brand-primary,#E69A38)] mt-1 line-clamp-2">
                         +{" "}
                         {item.selectedOptions
                           .map((o) =>
-                            (o.qty && o.qty > 1)
+                            o.qty && o.qty > 1
                               ? `${o.option.name} × ${o.qty}`
                               : o.option.name,
                           )
@@ -169,7 +186,7 @@ export function CartDrawer({
                       <span>🛵</span>
                       <span>
                         Додайте ще на{" "}
-                        <strong className="text-[#E2583E] font-extrabold">
+                        <strong className="text-[var(--brand-primary,#E2583E)] font-extrabold">
                           {250 - totalPrice} ₴
                         </strong>{" "}
                         для безкоштовної доставки
@@ -179,7 +196,9 @@ export function CartDrawer({
                 </span>
                 <span
                   className={`text-[11px] font-extrabold ${
-                    totalPrice >= 250 ? "text-emerald-400" : "text-[#E2583E]"
+                    totalPrice >= 250
+                      ? "text-emerald-400"
+                      : "text-[var(--brand-primary,#E2583E)]"
                   }`}
                 >
                   {Math.min(100, Math.round((totalPrice / 250) * 100))}%
@@ -190,7 +209,7 @@ export function CartDrawer({
                   className={`h-full transition-all duration-500 rounded-full ${
                     totalPrice >= 250
                       ? "bg-emerald-500"
-                      : "bg-gradient-to-r from-[#D34528] to-[#E2583E]"
+                      : "bg-gradient-to-r from-[var(--brand-primary,#D34528)]/80 to-[var(--brand-primary,#D34528)]"
                   }`}
                   style={{ width: `${Math.min(100, (totalPrice / 250) * 100)}%` }}
                 />
@@ -211,7 +230,7 @@ export function CartDrawer({
                   onOpenCheckout();
                 }}
                 type="button"
-                className="w-full bg-[#D34528] hover:bg-[#B8351B] text-white py-3.5 px-4 rounded-2xl font-bold text-base shadow-lg shadow-[#D34528]/25 transition-all active:scale-98 cursor-pointer flex items-center justify-center gap-2"
+                className="w-full bg-[var(--brand-primary,#D34528)] hover:opacity-90 text-white py-3.5 px-4 rounded-2xl font-bold text-base shadow-lg shadow-[var(--brand-primary,#D34528)]/25 transition-all active:scale-98 cursor-pointer flex items-center justify-center gap-2"
               >
                 <span>Оформити замовлення</span>
                 <span>→</span>
@@ -238,4 +257,3 @@ export function CartDrawer({
     </div>
   );
 }
-

@@ -1,11 +1,17 @@
 import type { OrderOut } from "../../types/order.ts";
 
-interface OrderDetailsCardProps {
+export interface OrderDetailsCardProps {
   order: OrderOut;
+  pickupAddress?: string;
 }
 
-export function OrderDetailsCard({ order }: OrderDetailsCardProps) {
+export function OrderDetailsCard({ order, pickupAddress }: OrderDetailsCardProps) {
   const isDelivery = order.fulfillment_type === "delivery";
+  const defaultPickupAddress =
+    order.source === "web_croissants"
+      ? "вул. Велика Васильківська, 24"
+      : "вул. Набережна, 12";
+  const resolvedPickupAddress = pickupAddress || defaultPickupAddress;
 
   return (
     <div className="space-y-4">
@@ -19,7 +25,10 @@ export function OrderDetailsCard({ order }: OrderDetailsCardProps) {
           <span className="text-[#94A3B8] shrink-0">Отримувач:</span>
           <span className="font-bold text-[#F1F5F9] text-right">
             {order.contact_name} •{" "}
-            <a href={`tel:${order.contact_phone}`} className="hover:underline text-[#E69A38]">
+            <a
+              href={`tel:${order.contact_phone}`}
+              className="hover:underline text-[var(--brand-primary,#D34528)]"
+            >
               {order.contact_phone}
             </a>
           </span>
@@ -33,8 +42,8 @@ export function OrderDetailsCard({ order }: OrderDetailsCardProps) {
                 🛵 Доставка: {order.delivery_address || "м. Київ"}
               </span>
             ) : (
-              <span className="inline-flex items-center gap-1 text-[#E69A38] bg-[#E69A38]/10 px-2 py-0.5 rounded-md border border-[#E69A38]/30">
-                🛍️ Самовивіз: вул. Велика Васильківська, 24
+              <span className="inline-flex items-center gap-1 text-[var(--brand-primary,#D34528)] bg-[var(--brand-primary,#D34528)]/10 px-2 py-0.5 rounded-md border border-[var(--brand-primary,#D34528)]/30">
+                🛍️ Самовивіз: {resolvedPickupAddress}
               </span>
             )}
           </span>
@@ -90,7 +99,7 @@ export function OrderDetailsCard({ order }: OrderDetailsCardProps) {
                   {item.variant_label} • {item.qty} шт × {item.unit_price} ₴
                 </div>
                 {item.options && item.options.length > 0 && (
-                  <div className="text-[11px] text-[#E69A38] mt-0.5">
+                  <div className="text-[11px] text-[var(--brand-primary,#E2A066)] mt-0.5">
                     + {item.options.map((o) => `${o.option_name} (+${o.price_delta} ₴)`).join(", ")}
                   </div>
                 )}
@@ -104,7 +113,7 @@ export function OrderDetailsCard({ order }: OrderDetailsCardProps) {
 
         <div className="pt-3 border-t border-white/10 flex items-center justify-between font-bold">
           <span className="text-sm text-[#F1F5F9]">Сума до сплати:</span>
-          <span className="text-xl text-[#E69A38] font-extrabold">
+          <span className="text-xl text-[var(--brand-primary,#D34528)] font-extrabold">
             {order.total_price} ₴
           </span>
         </div>
@@ -112,4 +121,3 @@ export function OrderDetailsCard({ order }: OrderDetailsCardProps) {
     </div>
   );
 }
-

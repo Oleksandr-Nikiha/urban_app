@@ -1,18 +1,38 @@
 import { useEffect, useState } from "react";
-import { CROISSANTS_LOCATION_ID, fetchDeliveryAddresses, submitWebOrder, updateWebProfile } from "../api/client.ts";
+import { fetchDeliveryAddresses, submitWebOrder, updateWebProfile } from "../api/client.ts";
 import { useCart } from "../context/CartContext.tsx";
+import { useModalBehavior } from "../hooks/useModalBehavior.ts";
 import type { DeliveryAddress } from "../types/catalog.ts";
-import type { OrderOut, WebOrderCreatePayload, WebOrderItemPayload } from "../types/order.ts";
-import { formatPhoneOnInput, handlePhoneKeyDown, formatPhoneNumber, isValidUkrainianPhone, normalizeE164Phone } from "../utils/phone.ts";
+import {
+  LAST_ORDER_STORAGE_KEY,
+  type OrderOut,
+  type WebOrderCreatePayload,
+  type WebOrderItemPayload,
+} from "../types/order.ts";
+import {
+  CUSTOMER_STORAGE_KEY,
+  isUserAuthenticated,
+  ORDERS_HISTORY_STORAGE_KEY,
+  saveSharedProfile,
+  USER_PROFILE_STORAGE_KEY,
+  type SavedCustomer,
+  type UserProfile,
+} from "../types/user.ts";
+import { calculateBonusCashback, getBonusCashbackPercentLabel } from "../utils/bonus.ts";
+import {
+  formatPhoneNumber,
+  formatPhoneOnInput,
+  handlePhoneKeyDown,
+  isValidUkrainianPhone,
+  normalizeE164Phone,
+} from "../utils/phone.ts";
 import { getWorkingHoursInfo } from "../utils/workingHours.ts";
 import { AddressFields } from "./checkout/AddressFields.tsx";
 import { CustomerInfoFields } from "./checkout/CustomerInfoFields.tsx";
-import { useModalBehavior } from "../hooks/useModalBehavior.ts";
-import { LAST_ORDER_STORAGE_KEY, ORDERS_HISTORY_STORAGE_KEY } from "./OrderTrackingModal.tsx";
-import { isUserAuthenticated, saveSharedProfile, USER_PROFILE_STORAGE_KEY, type UserProfile } from "../types/user.ts";
-import { calculateBonusCashback, getBonusCashbackPercentLabel } from "../utils/bonus.ts";
 
-interface CheckoutModalProps {
+export { CUSTOMER_STORAGE_KEY, type SavedCustomer };
+
+export interface CheckoutModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSuccess: (order: OrderOut, updatedProfile?: UserProfile) => void;
@@ -20,16 +40,14 @@ interface CheckoutModalProps {
   userProfile?: UserProfile | null;
   onRequireAuth?: () => void;
   onAuthSuccess?: (profile: UserProfile) => void;
-}
-
-export const CUSTOMER_STORAGE_KEY = "urban_customer_details_v1";
-
-export interface SavedCustomer {
-  name: string;
-  phone: string;
-  street: string;
-  house: string;
-  apartment: string;
+  locationId?: number;
+  source?: string;
+  brandTitle?: string;
+  brandLocationSubtitle?: string;
+  pickupAddress?: string;
+  pickupWorkingHours?: string;
+  deliveryWorkingHours?: string;
+  examplePhone?: string;
 }
 
 export function CheckoutModal({
@@ -40,6 +58,14 @@ export function CheckoutModal({
   userProfile,
   onRequireAuth,
   onAuthSuccess,
+  locationId,
+  source,
+  brandTitle,
+  brandLocationSubtitle,
+  pickupAddress,
+  pickupWorkingHours,
+  deliveryWorkingHours,
+  examplePhone,
 }: CheckoutModalProps) {
   useModalBehavior({ isOpen, onClose });
 
@@ -63,13 +89,47 @@ export function CheckoutModal({
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const isCroissants =
+    source === "web_croissants" ||
+    (typeof window !== "undefined" &&
+      (window.location.port === "5174" ||
+        window.location.hostname.includes("bakery") ||
+        window.location.hostname.includes("croissant")));
+
+  const resolvedLocationId = locationId ?? (isCroissants ? 2 : 1);
+  const resolvedSource = source ?? (isCroissants ? "web_croissants" : "web_pizza");
+  const resolvedBrandTitle =
+    brandTitle ?? (isCroissants ? "Urban Bakery & Coffee" : "Urban Pizza & Sushi");
+  const resolvedBrandLocationSubtitle =
+    brandLocationSubtitle ??
+    (isCroissants
+      ? "м. Київ, вул. Велика Васильківська, 24"
+      : "м. Київ, вул. Набережна, 12");
+  const resolvedPickupAddress =
+    pickupAddress ??
+    (isCroissants
+      ? "м. Київ, вул. Велика Васильківська, 24 (Urban Bakery & Coffee)"
+      : "м. Київ, вул. Набережна, 12 (Urban Pizza & Sushi)");
+  const resolvedPickupWorkingHours =
+    pickupWorkingHours ??
+    (isCroissants
+      ? "Пекарня відчинена з 08:00 до 21:00. Приготуємо свіжим до вашого приходу!"
+      : "Заклад відчинений з 10:30 до 21:30. Приготуємо гарячим та свіжим до вашого приходу!");
+  const resolvedDeliveryWorkingHours =
+    deliveryWorkingHours ??
+    (isCroissants
+      ? "🛵 Доставка по Києву щодня: 10:00 – 21:00"
+      : "🛵 Доставка по Києву щодня: 10:30 – 21:30");
+  const resolvedExamplePhone =
+    examplePhone ?? (isCroissants ? "+380 44 222 00 22" : "+380 93 112 77 33");
+
   const hoursInfo = getWorkingHoursInfo();
 
   const userBonusBalance = userProfile?.bonuses ?? 0;
   // Дозволяємо сплатити бонусами до 30% вартості замовлення або до суми балансу (щонайменше 1 грн до сплати)
   const maxBonusDiscount = Math.min(
     userBonusBalance,
-    Math.min(Math.floor(totalPrice * 0.3), Math.max(0, totalPrice - 1))
+    Math.min(Math.floor(totalPrice * 0.3), Math.max(0, totalPrice - 1)),
   );
   const bonusDiscount = useBonuses ? maxBonusDiscount : 0;
   const finalPrice = Math.max(0, totalPrice - bonusDiscount);
@@ -174,7 +234,7 @@ export function CheckoutModal({
     }
 
     if (!isValidUkrainianPhone(phone)) {
-      setError("Вкажіть коректний контактний номер телефону (наприклад: +380 44 222 00 22)");
+      setError(`Вкажіть коректний контактний номер телефону (наприклад: ${resolvedExamplePhone})`);
       return;
     }
 
@@ -222,7 +282,7 @@ export function CheckoutModal({
 
     const payload: WebOrderCreatePayload = {
       telegram_id: tgId,
-      location_id: CROISSANTS_LOCATION_ID,
+      location_id: resolvedLocationId,
       fulfillment_type: fulfillmentType,
       delivery_address: fullAddress,
       contact_name: name.trim(),
@@ -231,7 +291,7 @@ export function CheckoutModal({
       scheduled_time: isAsap ? null : scheduledTime.trim() || null,
       comment: finalComment || null,
       bonus_spent: bonusDiscount,
-      source: "web_croissants",
+      source: resolvedSource,
       items: orderItems,
     };
 
@@ -281,9 +341,13 @@ export function CheckoutModal({
           apartment: apartment.trim(),
           telegram_id: createdOrder.telegram_id || prevProf.telegram_id || null,
           bonuses: newBonusBalance,
-          client_code: prevProf.client_code || (createdOrder.telegram_id ? `UB-${createdOrder.telegram_id}` : undefined),
+          client_code:
+            prevProf.client_code ||
+            (createdOrder.telegram_id ? `UB-${createdOrder.telegram_id}` : undefined),
           is_phone_verified: Boolean(createdOrder.telegram_id || prevProf.is_phone_verified),
-          isAuthenticated: Boolean(prevProf.isAuthenticated || createdOrder.telegram_id || cleanPhone),
+          isAuthenticated: Boolean(
+            prevProf.isAuthenticated || createdOrder.telegram_id || cleanPhone,
+          ),
         };
         saveSharedProfile(updatedProf);
 
@@ -296,7 +360,9 @@ export function CheckoutModal({
         }
 
         // Сповіщаємо інші компоненти (кабінет, відстеження) про нове замовлення
-        window.dispatchEvent(new CustomEvent("urban:order_created", { detail: createdOrder }));
+        window.dispatchEvent(
+          new CustomEvent("urban:order_created", { detail: createdOrder }),
+        );
 
         if (onAuthSuccess && isUserAuthenticated(updatedProf)) {
           onAuthSuccess(updatedProf);
@@ -308,7 +374,8 @@ export function CheckoutModal({
       onSuccess(createdOrder);
       onClose();
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : "Помилка при оформленні замовлення";
+      const message =
+        err instanceof Error ? err.message : "Помилка при оформленні замовлення";
       setError(message);
     } finally {
       setSubmitting(false);
@@ -325,7 +392,7 @@ export function CheckoutModal({
               Оформлення замовлення
             </h2>
             <p className="text-[11px] sm:text-xs text-[#94A3B8] mt-0.5">
-              Urban Bakery & Coffee • м. Київ, вул. Велика Васильківська, 24
+              {resolvedBrandTitle} • {resolvedBrandLocationSubtitle}
             </p>
           </div>
           <button
@@ -346,7 +413,9 @@ export function CheckoutModal({
                   <span className="text-base shrink-0">🎁</span>
                   <span>
                     Маєте акаунт?{" "}
-                    <span className="font-semibold text-white">Увійдіть для нарахування бонусів</span>
+                    <span className="font-semibold text-white">
+                      Увійдіть для нарахування бонусів
+                    </span>
                   </span>
                 </div>
                 <button
@@ -384,7 +453,7 @@ export function CheckoutModal({
                 <button
                   type="button"
                   onClick={handleClearSavedData}
-                  className="text-[#E69A38] hover:underline font-semibold text-[11px] cursor-pointer"
+                  className="text-[var(--brand-primary,#E2583E)] hover:underline font-semibold text-[11px] cursor-pointer"
                 >
                   Очистити
                 </button>
@@ -434,6 +503,9 @@ export function CheckoutModal({
               apartment={apartment}
               setApartment={setApartment}
               streetsList={streetsList}
+              pickupAddress={resolvedPickupAddress}
+              pickupWorkingHours={resolvedPickupWorkingHours}
+              deliveryWorkingHours={resolvedDeliveryWorkingHours}
             />
 
             {/* Контактні дані та параметри */}
@@ -465,7 +537,11 @@ export function CheckoutModal({
                     <div>
                       <div className="text-xs font-bold text-white">Бонуси URBAN CLUB</div>
                       <div className="text-[11px] text-[#94A3B8]">
-                        Доступно: <strong className="text-[#E69A38] font-bold">{userBonusBalance} ₴</strong> (до -{maxBonusDiscount} ₴ на це замовлення)
+                        Доступно:{" "}
+                        <strong className="text-[var(--brand-primary,#E2583E)] font-bold">
+                          {userBonusBalance} ₴
+                        </strong>{" "}
+                        (до -{maxBonusDiscount} ₴ на це замовлення)
                       </div>
                     </div>
                   </div>
@@ -476,7 +552,7 @@ export function CheckoutModal({
                       onChange={(e) => setUseBonuses(e.target.checked)}
                       className="sr-only peer"
                     />
-                    <div className="w-11 h-6 bg-[#222731] border border-white/10 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#E69A38]"></div>
+                    <div className="w-11 h-6 bg-[#222731] border border-white/10 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[var(--brand-primary,#D34528)]"></div>
                   </label>
                 </div>
                 {useBonuses && (
@@ -505,7 +581,8 @@ export function CheckoutModal({
               </div>
               {finalPrice > 50 ? (
                 <div className="text-[10px] text-emerald-400 font-medium">
-                  + {calculateBonusCashback(finalPrice)} бонусів кешбеку ({getBonusCashbackPercentLabel(finalPrice)}) після виконання
+                  + {calculateBonusCashback(finalPrice)} бонусів кешбеку (
+                  {getBonusCashbackPercentLabel(finalPrice)}) після виконання
                 </div>
               ) : (
                 <div className="text-[10px] text-[#94A3B8] font-medium">
@@ -517,7 +594,7 @@ export function CheckoutModal({
             <button
               type="submit"
               disabled={submitting}
-              className="flex-1 max-w-xs bg-[#E69A38] hover:bg-[#D4892A] disabled:opacity-50 text-white py-3 sm:py-3.5 px-5 rounded-2xl font-bold text-sm sm:text-base shadow-lg shadow-[#E69A38]/25 transition-all active:scale-98 cursor-pointer flex items-center justify-center gap-2"
+              className="flex-1 max-w-xs bg-[var(--brand-primary,#D34528)] hover:opacity-90 disabled:opacity-50 text-white py-3 sm:py-3.5 px-5 rounded-2xl font-bold text-sm sm:text-base shadow-lg shadow-[var(--brand-primary,#D34528)]/25 transition-all active:scale-98 cursor-pointer flex items-center justify-center gap-2"
             >
               {submitting ? (
                 <>

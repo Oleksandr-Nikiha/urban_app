@@ -12,7 +12,7 @@ interface StepItem {
   icon: string;
 }
 
-interface OrderTimelineProps {
+export interface OrderTimelineProps {
   currentStepInfo: StepInfo;
   stepsList: StepItem[];
 }
@@ -80,7 +80,7 @@ export function OrderTimeline({ currentStepInfo, stepsList }: OrderTimelineProps
                       isPassed
                         ? "bg-emerald-500 text-white shadow-sm ring-4 ring-[#181B22]"
                         : isCurrent
-                        ? "bg-[#E69A38] text-white ring-4 ring-[#E69A38]/20 shadow-md scale-110"
+                        ? "bg-[var(--brand-primary,#D34528)] text-white ring-4 ring-[var(--brand-primary,#D34528)]/20 shadow-md scale-110"
                         : "bg-[#14171E] text-[#94A3B8] border border-white/10 ring-4 ring-[#181B22]"
                     }`}
                   >
@@ -106,4 +106,3 @@ export function OrderTimeline({ currentStepInfo, stepsList }: OrderTimelineProps
     </div>
   );
 }
-

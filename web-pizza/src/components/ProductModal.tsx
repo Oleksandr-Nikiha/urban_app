@@ -3,7 +3,12 @@ import { DEFAULT_PRODUCT_IMAGE, fetchProductDetail, getImageUrl } from "../api/c
 import { useCart } from "../context/CartContext.tsx";
 import { useModalBehavior } from "../hooks/useModalBehavior.ts";
 import type { SelectedOptionWithGroup } from "../types/cart.ts";
-import type { ProductDetail, ProductOptionGroup, ProductOptionItem, ProductVariant } from "../types/catalog.ts";
+import type {
+  ProductDetail,
+  ProductOptionGroup,
+  ProductOptionItem,
+  ProductVariant,
+} from "../types/catalog.ts";
 import {
   calculateGroupPricing,
   countGroupUnits,
@@ -14,7 +19,7 @@ import {
   type PicksMap,
 } from "../utils/productOptions.ts";
 
-interface ProductModalProps {
+export interface ProductModalProps {
   productId: number;
   onClose: () => void;
 }
@@ -51,7 +56,7 @@ export function ProductModal({ productId, onClose }: ProductModalProps) {
       })
       .catch((err) => {
         if (!isMounted) return;
-        setError(err.message || "Помилка завантаження страви");
+        setError(err instanceof Error ? err.message : "Помилка завантаження страви");
       })
       .finally(() => {
         if (isMounted) setLoading(false);
@@ -64,9 +69,9 @@ export function ProductModal({ productId, onClose }: ProductModalProps) {
 
   if (loading) {
     return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4">
-        <div className="bg-[#181B22] rounded-3xl p-8 max-w-sm w-full text-center space-y-4 border border-white/10 shadow-2xl">
-          <div className="w-12 h-12 border-4 border-[#D34528] border-t-transparent rounded-full animate-spin mx-auto"></div>
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-xs p-4">
+        <div className="bg-[#14171E] border border-white/10 text-white rounded-3xl p-8 max-w-sm w-full text-center space-y-4">
+          <div className="w-12 h-12 border-4 border-[var(--brand-primary,#D34528)] border-t-transparent rounded-full animate-spin mx-auto"></div>
           <p className="text-sm font-bold text-[#CBD5E1]">Завантажуємо смаколики...</p>
         </div>
       </div>
@@ -75,13 +80,13 @@ export function ProductModal({ productId, onClose }: ProductModalProps) {
 
   if (error || !product || !selectedVariant) {
     return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4">
-        <div className="bg-[#181B22] rounded-3xl p-8 max-w-sm w-full text-center space-y-4 border border-white/10 shadow-2xl">
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-xs p-4">
+        <div className="bg-[#14171E] border border-white/10 rounded-3xl p-8 max-w-sm w-full text-center space-y-4 text-white">
           <p className="text-red-400 font-bold">{error || "Страву не знайдено"}</p>
           <button
             onClick={onClose}
             type="button"
-            className="w-full bg-[#222731] hover:bg-[#2C3340] text-white py-2.5 rounded-xl font-bold cursor-pointer border border-white/10"
+            className="w-full bg-[var(--brand-primary,#D34528)] hover:opacity-90 text-white py-2.5 rounded-xl font-bold transition-colors cursor-pointer"
           >
             Закрити
           </button>
@@ -103,13 +108,13 @@ export function ProductModal({ productId, onClose }: ProductModalProps) {
   const totalPrice = unitTotal * qty;
 
   const unfilledGroups = product.option_groups.filter(
-    (g) => !(groupCalculations[g.group_id]?.isValid ?? true)
+    (g) => !(groupCalculations[g.group_id]?.isValid ?? true),
   );
   const canAddToCart = unfilledGroups.length === 0;
 
   const handleToggleSingleOption = (
     group: ProductOptionGroup,
-    option: ProductOptionItem
+    option: ProductOptionItem,
   ) => {
     setShowValidation(false);
     const currentPicks = picks[group.group_id] || {};
@@ -129,7 +134,7 @@ export function ProductModal({ productId, onClose }: ProductModalProps) {
   const handleChangeOptionCount = (
     group: ProductOptionGroup,
     option: ProductOptionItem,
-    delta: number
+    delta: number,
   ) => {
     setShowValidation(false);
     const currentPicks = picks[group.group_id] || {};
@@ -253,16 +258,20 @@ export function ProductModal({ productId, onClose }: ProductModalProps) {
                         type="button"
                         className={`p-3 rounded-2xl border text-left transition-all cursor-pointer ${
                           isSelected
-                            ? "border-[#E2583E] bg-[#D34528]/15 shadow-sm ring-2 ring-[#E2583E]/20"
+                            ? "border-[var(--brand-primary,#D34528)] bg-[var(--brand-primary,#D34528)]/15 shadow-sm ring-2 ring-[var(--brand-primary,#D34528)]/20"
                             : "border-white/10 hover:border-white/25 bg-[#181B22]"
                         }`}
                       >
                         <div className="font-bold text-sm text-white">{v.label}</div>
                         <div className="flex items-center justify-between text-xs text-[#94A3B8] mt-1">
                           {v.weight && (
-                            <span>{/[а-яА-Яa-zA-Z]/.test(v.weight) ? v.weight : `${v.weight} г`}</span>
+                            <span>
+                              {/[а-яА-Яa-zA-Z]/.test(v.weight) ? v.weight : `${v.weight} г`}
+                            </span>
                           )}
-                          <span className="font-extrabold text-[#E2583E]">{v.price} ₴</span>
+                          <span className="font-extrabold text-[var(--brand-primary,#D34528)]">
+                            {v.price} ₴
+                          </span>
                         </div>
                       </button>
                     );
@@ -297,7 +306,7 @@ export function ProductModal({ productId, onClose }: ProductModalProps) {
                     <div className="flex items-center gap-2">
                       <span className="text-sm font-bold text-white">{group.name}</span>
                       {group.free_count > 0 && (
-                        <span className="text-xs text-emerald-300 bg-emerald-950/60 px-2 py-0.5 rounded-full font-semibold border border-emerald-500/30">
+                        <span className="text-xs text-amber-300 bg-amber-950/60 px-2 py-0.5 rounded-full font-semibold border border-amber-500/30">
                           {group.free_count} безкоштовно
                         </span>
                       )}
@@ -340,7 +349,7 @@ export function ProductModal({ productId, onClose }: ProductModalProps) {
                             key={opt.variant_id}
                             className={`flex items-center justify-between p-3 rounded-2xl border text-sm transition-all ${
                               isChecked
-                                ? "border-[#E2583E] bg-[#D34528]/15"
+                                ? "border-[var(--brand-primary,#D34528)] bg-[var(--brand-primary,#D34528)]/15"
                                 : "border-white/10 bg-[#181B22] hover:border-white/20"
                             }`}
                           >
@@ -349,11 +358,11 @@ export function ProductModal({ productId, onClose }: ProductModalProps) {
                               {/* Відображення ціни або безкоштовної квоти */}
                               {count > 0 ? (
                                 itemPricing.isFullyFree ? (
-                                  <span className="text-xs text-emerald-400 bg-emerald-500/15 border border-emerald-500/30 px-2 py-0.5 rounded-md font-bold ml-2">
+                                  <span className="text-xs text-amber-400 bg-amber-500/15 border border-amber-500/30 px-2 py-0.5 rounded-md font-bold ml-2">
                                     Безкоштовно
                                   </span>
                                 ) : (
-                                  <span className="text-xs text-[#E2583E] ml-2 font-bold">
+                                  <span className="text-xs text-[var(--brand-primary,#D34528)] ml-2 font-bold">
                                     +{itemPricing.effectiveCost} ₴
                                     {itemPricing.freeQty > 0 && (
                                       <span className="text-[#94A3B8] font-normal ml-1">
@@ -363,7 +372,7 @@ export function ProductModal({ productId, onClose }: ProductModalProps) {
                                   </span>
                                 )
                               ) : itemPricing.hasFreeQuotaRemaining ? (
-                                <span className="text-xs text-emerald-400/80 ml-2 font-semibold">
+                                <span className="text-xs text-amber-400/80 ml-2 font-semibold">
                                   0 ₴ (включено)
                                 </span>
                               ) : opt.price_delta > 0 ? (
@@ -413,7 +422,7 @@ export function ProductModal({ productId, onClose }: ProductModalProps) {
                           type="button"
                           className={`w-full flex items-center justify-between p-3 rounded-2xl border text-sm transition-all cursor-pointer ${
                             isChecked
-                              ? "border-[#E2583E] bg-[#D34528]/15 font-bold text-white"
+                              ? "border-[var(--brand-primary,#D34528)] bg-[var(--brand-primary,#D34528)]/15 font-bold text-white"
                               : "border-white/10 hover:border-white/25 text-[#CBD5E1] bg-[#181B22]"
                           }`}
                         >
@@ -421,7 +430,7 @@ export function ProductModal({ productId, onClose }: ProductModalProps) {
                             <span
                               className={`w-4 h-4 rounded-full flex items-center justify-center border text-[10px] ${
                                 isChecked
-                                  ? "bg-[#D34528] border-[#D34528] text-white"
+                                  ? "bg-[var(--brand-primary,#D34528)] border-[var(--brand-primary,#D34528)] text-white"
                                   : "border-white/20"
                               }`}
                             >
@@ -433,16 +442,16 @@ export function ProductModal({ productId, onClose }: ProductModalProps) {
                           <div>
                             {isChecked ? (
                               itemPricing.isFullyFree ? (
-                                <span className="text-xs text-emerald-400 bg-emerald-500/15 border border-emerald-500/30 px-2 py-0.5 rounded-md font-bold">
+                                <span className="text-xs text-amber-400 bg-amber-500/15 border border-amber-500/30 px-2 py-0.5 rounded-md font-bold">
                                   Безкоштовно
                                 </span>
                               ) : (
-                                <span className="text-xs text-[#E2583E] font-bold">
+                                <span className="text-xs text-[var(--brand-primary,#D34528)] font-bold">
                                   +{itemPricing.effectiveCost} ₴
                                 </span>
                               )
                             ) : itemPricing.hasFreeQuotaRemaining ? (
-                              <span className="text-xs text-emerald-400/80 font-semibold">
+                              <span className="text-xs text-amber-400/80 font-semibold">
                                 0 ₴ (включено)
                               </span>
                             ) : opt.price_delta > 0 ? (
@@ -486,7 +495,7 @@ export function ProductModal({ productId, onClose }: ProductModalProps) {
           <button
             onClick={handleAddToCart}
             type="button"
-            className="flex-1 bg-[#D34528] hover:bg-[#B8351B] text-white py-3 sm:py-3.5 px-4 sm:px-6 rounded-2xl font-bold text-sm sm:text-base shadow-lg shadow-[#D34528]/25 transition-all active:scale-98 cursor-pointer flex items-center justify-between"
+            className="flex-1 bg-[var(--brand-primary,#D34528)] hover:opacity-90 text-white py-3 sm:py-3.5 px-4 sm:px-6 rounded-2xl font-bold text-sm sm:text-base shadow-lg shadow-[var(--brand-primary,#D34528)]/25 transition-all active:scale-98 cursor-pointer flex items-center justify-between"
           >
             <span>В кошик</span>
             <span className="bg-white/20 text-white px-2.5 py-0.5 rounded-lg text-sm sm:text-base font-extrabold">

@@ -1,4 +1,6 @@
-interface CustomerInfoFieldsProps {
+import type React from "react";
+
+export interface CustomerInfoFieldsProps {
   name: string;
   setName: (v: string) => void;
   phone: string;
@@ -49,7 +51,7 @@ export function CustomerInfoFields({
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="Як до вас звертатися?"
-            className="w-full bg-[#121417] border border-white/10 text-white placeholder:text-[#64748B] rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#D34528]/40"
+            className="w-full bg-[#121417] border border-white/10 text-white placeholder:text-[#64748B] rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary,#D34528)]/40"
           />
         </div>
         <div>
@@ -74,7 +76,7 @@ export function CustomerInfoFields({
             className={`w-full border rounded-xl px-3.5 py-2.5 text-sm font-mono tracking-tight ${
               isPhoneVerified
                 ? "bg-[#1A1D24] border-white/10 text-[#94A3B8] opacity-80 cursor-not-allowed"
-                : "bg-[#121417] border-white/10 text-white placeholder:text-[#64748B] focus:outline-none focus:ring-2 focus:ring-[#D34528]/40"
+                : "bg-[#121417] border-white/10 text-white placeholder:text-[#64748B] focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary,#D34528)]/40"
             }`}
           />
         </div>
@@ -86,7 +88,7 @@ export function CustomerInfoFields({
           type="checkbox"
           checked={saveDetails}
           onChange={(e) => setSaveDetails(e.target.checked)}
-          className="accent-[#D34528] w-4 h-4 rounded"
+          className="accent-[var(--brand-primary,#D34528)] w-4 h-4 rounded"
         />
         <span>Запам'ятати мої контактні дані для наступних замовлень</span>
       </label>
@@ -103,7 +105,7 @@ export function CustomerInfoFields({
               name="time_type"
               checked={isAsap}
               onChange={() => setIsAsap(true)}
-              className="accent-[#D34528]"
+              className="accent-[var(--brand-primary,#D34528)]"
             />
             <span>Якнайшвидше (від 30 хв)</span>
           </label>
@@ -113,7 +115,7 @@ export function CustomerInfoFields({
               name="time_type"
               checked={!isAsap}
               onChange={() => setIsAsap(false)}
-              className="accent-[#D34528]"
+              className="accent-[var(--brand-primary,#D34528)]"
             />
             <span>На певний час</span>
           </label>
@@ -124,7 +126,7 @@ export function CustomerInfoFields({
             value={scheduledTime}
             onChange={(e) => setScheduledTime(e.target.value)}
             placeholder="Наприклад: 14:30 або на завтра 09:00"
-            className="w-full bg-[#121417] border border-white/10 text-white placeholder:text-[#64748B] rounded-xl px-3.5 py-2.5 text-sm mt-2 focus:outline-none focus:ring-2 focus:ring-[#D34528]/40"
+            className="w-full bg-[#121417] border border-white/10 text-white placeholder:text-[#64748B] rounded-xl px-3.5 py-2.5 text-sm mt-2 focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary,#D34528)]/40"
           />
         )}
       </div>
@@ -140,7 +142,7 @@ export function CustomerInfoFields({
             onClick={() => setPaymentMethod("cash")}
             className={`p-3 rounded-2xl border text-sm font-bold transition-all cursor-pointer flex items-center justify-center gap-2 ${
               paymentMethod === "cash"
-                ? "border-[#E2583E] bg-[#D34528]/15 text-white ring-2 ring-[#E2583E]/20"
+                ? "border-[var(--brand-primary,#D34528)] bg-[var(--brand-primary,#D34528)]/15 text-white ring-2 ring-[var(--brand-primary,#D34528)]/20"
                 : "border-white/10 bg-[#121417] text-[#94A3B8] hover:text-white"
             }`}
           >
@@ -152,7 +154,7 @@ export function CustomerInfoFields({
             onClick={() => setPaymentMethod("card")}
             className={`p-3 rounded-2xl border text-sm font-bold transition-all cursor-pointer flex items-center justify-center gap-2 ${
               paymentMethod === "card"
-                ? "border-[#E2583E] bg-[#D34528]/15 text-white ring-2 ring-[#E2583E]/20"
+                ? "border-[var(--brand-primary,#D34528)] bg-[var(--brand-primary,#D34528)]/15 text-white ring-2 ring-[var(--brand-primary,#D34528)]/20"
                 : "border-white/10 bg-[#121417] text-[#94A3B8] hover:text-white"
             }`}
           >
@@ -172,10 +174,9 @@ export function CustomerInfoFields({
           value={comment}
           onChange={(e) => setComment(e.target.value)}
           placeholder="Побажання щодо пакування, код домофону тощо..."
-          className="w-full bg-[#121417] border border-white/10 text-white placeholder:text-[#64748B] rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#D34528]/40"
+          className="w-full bg-[#121417] border border-white/10 text-white placeholder:text-[#64748B] rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary,#D34528)]/40"
         />
       </div>
     </div>
   );
 }
-

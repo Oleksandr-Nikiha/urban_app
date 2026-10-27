@@ -85,6 +85,48 @@ SHARED_MAPPINGS = [
         "web-croissants/src/components/ui/UserAvatar.tsx",
         "web-group/src/components/ui/UserAvatar.tsx"
     ]),
+
+    # tracking components
+    ("components/tracking/OrderTimeline.tsx", [
+        "web-pizza/src/components/tracking/OrderTimeline.tsx",
+        "web-croissants/src/components/tracking/OrderTimeline.tsx",
+    ]),
+    ("components/tracking/OrderDetailsCard.tsx", [
+        "web-pizza/src/components/tracking/OrderDetailsCard.tsx",
+        "web-croissants/src/components/tracking/OrderDetailsCard.tsx",
+    ]),
+    ("components/OrderTrackingModal.tsx", [
+        "web-pizza/src/components/OrderTrackingModal.tsx",
+        "web-croissants/src/components/OrderTrackingModal.tsx",
+    ]),
+
+    # checkout components
+    ("components/checkout/AddressFields.tsx", [
+        "web-pizza/src/components/checkout/AddressFields.tsx",
+        "web-croissants/src/components/checkout/AddressFields.tsx",
+    ]),
+    ("components/checkout/CustomerInfoFields.tsx", [
+        "web-pizza/src/components/checkout/CustomerInfoFields.tsx",
+        "web-croissants/src/components/checkout/CustomerInfoFields.tsx",
+    ]),
+    ("components/OrderSuccessModal.tsx", [
+        "web-pizza/src/components/OrderSuccessModal.tsx",
+        "web-croissants/src/components/OrderSuccessModal.tsx",
+    ]),
+    ("components/CheckoutModal.tsx", [
+        "web-pizza/src/components/CheckoutModal.tsx",
+        "web-croissants/src/components/CheckoutModal.tsx",
+    ]),
+
+    # shopping components
+    ("components/ProductModal.tsx", [
+        "web-pizza/src/components/ProductModal.tsx",
+        "web-croissants/src/components/ProductModal.tsx",
+    ]),
+    ("components/CartDrawer.tsx", [
+        "web-pizza/src/components/CartDrawer.tsx",
+        "web-croissants/src/components/CartDrawer.tsx",
+    ]),
 ]
 
 

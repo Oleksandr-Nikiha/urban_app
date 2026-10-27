@@ -1,19 +1,24 @@
 import { useEffect, useState } from "react";
 import { fetchWebOrder } from "../api/client.ts";
 import { useModalBehavior } from "../hooks/useModalBehavior.ts";
-import type { OrderOut } from "../types/order.ts";
+import { LAST_ORDER_STORAGE_KEY, type OrderOut } from "../types/order.ts";
+import { ORDERS_HISTORY_STORAGE_KEY } from "../types/user.ts";
 import { OrderDetailsCard } from "./tracking/OrderDetailsCard.tsx";
 import { OrderTimeline } from "./tracking/OrderTimeline.tsx";
 
-export const LAST_ORDER_STORAGE_KEY = "urban_last_order_id";
-export const ORDERS_HISTORY_STORAGE_KEY = "urban_orders_history";
+export { LAST_ORDER_STORAGE_KEY, ORDERS_HISTORY_STORAGE_KEY };
 
-interface OrderTrackingModalProps {
+export interface OrderTrackingModalProps {
   orderId: number | null;
   initialOrder?: OrderOut | null;
   isOpen: boolean;
   onClose: () => void;
   isNewlyCreated?: boolean;
+  brandTitle?: string;
+  brandPhone?: string;
+  pickupAddress?: string;
+  cookingDescription?: string;
+  deliveryDescription?: string;
 }
 
 export function OrderTrackingModal({
@@ -22,6 +27,11 @@ export function OrderTrackingModal({
   isOpen,
   onClose,
   isNewlyCreated = false,
+  brandTitle,
+  brandPhone,
+  pickupAddress,
+  cookingDescription,
+  deliveryDescription,
 }: OrderTrackingModalProps) {
   useModalBehavior({ isOpen, onClose });
 
@@ -160,6 +170,29 @@ export function OrderTrackingModal({
   if (!isOpen) return null;
 
   const isDelivery = order?.fulfillment_type === "delivery";
+  const isCroissants =
+    order?.source === "web_croissants" ||
+    (brandTitle && /croissant|bakery|пекарн/i.test(brandTitle));
+
+  const resolvedBrandTitle =
+    brandTitle || (isCroissants ? "Urban Bakery & Coffee" : "Urban Pizza & Sushi");
+  const resolvedBrandPhone =
+    brandPhone || (isCroissants ? "+380442220022" : "+380671127733");
+  const resolvedPickupAddress =
+    pickupAddress ||
+    (isCroissants
+      ? "м. Київ, вул. Велика Васильківська, 24"
+      : "м. Київ, вул. Набережна, 12");
+  const resolvedCookingDesc =
+    cookingDescription ||
+    (isCroissants
+      ? "Наші пекарі готують великі хрусткі круасани та ваші страви прямо зараз."
+      : "Наші піцайоло та сушисти готують ваше замовлення прямо зараз.");
+  const resolvedDeliveryDesc =
+    deliveryDescription ||
+    (isCroissants
+      ? "Ваші хрусткі круасани та напої прямують за вказаною адресою в термосумці."
+      : "Ваша гаряча піца та свіжі роли прямують за вказаною адресою в термосумці.");
 
   // Визначення кроку та опису статусу
   const getStepData = (status: string, isDeliv: boolean) => {
@@ -169,7 +202,7 @@ export function OrderTrackingModal({
         isCancelled: true,
         title: "Замовлення скасовано ❌",
         desc: "На жаль, замовлення було скасовано або відхилено. Якщо у вас є запитання, зателефонуйте менеджеру.",
-        badge: "bg-red-100 text-red-800 border-red-200",
+        badge: "bg-red-950/40 text-red-300 border-red-500/30",
       };
     }
 
@@ -178,8 +211,8 @@ export function OrderTrackingModal({
         stepIndex: 4,
         isCompleted: true,
         title: isDeliv ? "Замовлення доставлено! 🎉" : "Замовлення видано! 🎉",
-        desc: "Дякуємо, що обираєте Urban Bakery & Coffee! Бажаємо приємного смаку та гарного настрою!",
-        badge: "bg-emerald-100 text-emerald-800 border-emerald-200",
+        desc: `Дякуємо, що обираєте ${resolvedBrandTitle}! Бажаємо смачного та чудового настрою!`,
+        badge: "bg-emerald-950/40 text-emerald-300 border-emerald-500/30",
       };
     }
 
@@ -187,8 +220,8 @@ export function OrderTrackingModal({
       return {
         stepIndex: 3,
         title: "Кур'єр уже в дорозі 🛵💨",
-        desc: "Ваші хрусткі круасани та напої прямують за вказаною адресою в термосумці.",
-        badge: "bg-amber-100 text-amber-900 border-amber-200",
+        desc: resolvedDeliveryDesc,
+        badge: "bg-amber-950/40 text-amber-300 border-amber-500/30",
       };
     }
 
@@ -199,18 +232,18 @@ export function OrderTrackingModal({
           ? "Спаковано та чекає кур'єра 🛍️"
           : "Замовлення готове до видачі! 🛍️",
         desc: isDeliv
-          ? "Страви свіжоспечені та чекають передачі в доставку."
-          : "Завітайте до нашої пекарні: м. Київ, вул. Велика Васильківська, 24.",
-        badge: "bg-emerald-100 text-emerald-800 border-emerald-200",
+          ? "Страви свіжоприготовані та чекають передачі в доставку."
+          : `Завітайте до нашого закладу: ${resolvedPickupAddress}.`,
+        badge: "bg-emerald-950/40 text-emerald-300 border-emerald-500/30",
       };
     }
 
     if (status === "in_progress" || status === "cooking") {
       return {
         stepIndex: 2,
-        title: "Випікається на кухні 👨‍🍳🔥",
-        desc: "Наші пекарі готують великі хрусткі круасани та ваші страви прямо зараз.",
-        badge: "bg-orange-100 text-orange-900 border-orange-200",
+        title: "Готується на кухні 👨‍🍳🔥",
+        desc: resolvedCookingDesc,
+        badge: "bg-orange-950/40 text-orange-300 border-orange-500/30",
       };
     }
 
@@ -218,16 +251,16 @@ export function OrderTrackingModal({
       return {
         stepIndex: 1,
         title: "Замовлення підтверджено ✅",
-        desc: "Пекарня підтвердила деталі та готується до випікання страв своєчасно.",
-        badge: "bg-sky-100 text-sky-900 border-sky-200",
+        desc: "Заклад підтвердив деталі та готується до приготування страв своєчасно.",
+        badge: "bg-sky-950/40 text-sky-300 border-sky-500/30",
       };
     }
 
     return {
       stepIndex: 0,
-      title: "Очікує підтвердження пекарні ⏳",
+      title: "Очікує підтвердження закладу ⏳",
       desc: "Замовлення надійшло до системи. Менеджер бере його в роботу.",
-      badge: "bg-amber-100 text-amber-900 border-amber-200",
+      badge: "bg-amber-950/40 text-amber-300 border-amber-500/30",
     };
   };
 
@@ -313,7 +346,7 @@ export function OrderTrackingModal({
               <span className="text-2xl shrink-0">🎉</span>
               <div className="space-y-1">
                 <div className="font-bold text-sm sm:text-base text-emerald-200">
-                  Дякуємо! Замовлення успішно передано до пекарні
+                  Дякуємо! Замовлення успішно передано до закладу
                 </div>
                 <p className="text-emerald-400 text-xs leading-relaxed">
                   Кухня вже отримала сповіщення. Ви можете слідкувати за приготуванням та доставкою прямо на цій сторінці.
@@ -325,7 +358,7 @@ export function OrderTrackingModal({
           {/* Індикатор завантаження або помилка */}
           {loading && !order && (
             <div className="py-12 flex flex-col items-center justify-center text-center space-y-3">
-              <div className="w-10 h-10 border-3 border-[#E69A38] border-t-transparent rounded-full animate-spin" />
+              <div className="w-10 h-10 border-3 border-[var(--brand-primary,#D34528)] border-t-transparent rounded-full animate-spin" />
               <p className="text-sm font-semibold text-[#94A3B8]">
                 Завантажуємо інформацію про замовлення...
               </p>
@@ -365,7 +398,7 @@ export function OrderTrackingModal({
               <OrderTimeline currentStepInfo={currentStepInfo} stepsList={stepsList} />
 
               {/* Деталізація замовлення */}
-              <OrderDetailsCard order={order} />
+              <OrderDetailsCard order={order} pickupAddress={resolvedPickupAddress} />
 
               {/* Швидкі дії */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
@@ -379,8 +412,8 @@ export function OrderTrackingModal({
                 </button>
 
                 <a
-                  href="tel:+380442220022"
-                  className="w-full bg-[#E69A38] hover:bg-[#D4892A] text-white py-3 px-4 rounded-2xl font-bold text-xs sm:text-sm transition-all active:scale-98 flex items-center justify-center gap-2 shadow-lg shadow-[#E69A38]/20 cursor-pointer"
+                  href={`tel:${resolvedBrandPhone}`}
+                  className="w-full bg-[var(--brand-primary,#D34528)] hover:opacity-90 text-white py-3 px-4 rounded-2xl font-bold text-xs sm:text-sm transition-all active:scale-98 flex items-center justify-center gap-2 shadow-lg shadow-[var(--brand-primary,#D34528)]/20 cursor-pointer"
                 >
                   <span>📞</span>
                   <span>Подзвонити в заклад</span>
@@ -389,7 +422,6 @@ export function OrderTrackingModal({
             </>
           )}
 
-          {/* Нещодавні замовлення */}
           {recentOrderIds.length > 1 && (
             <div className="pt-4 border-t border-white/10 space-y-2">
               <span className="text-[11px] font-bold text-[#94A3B8] uppercase tracking-wider block">
@@ -403,7 +435,7 @@ export function OrderTrackingModal({
                     onClick={() => setCurrentOrderId(id)}
                     className={`px-2.5 py-1 rounded-lg font-bold text-xs transition-colors cursor-pointer ${
                       currentOrderId === id
-                        ? "bg-[#E69A38] text-white shadow-sm"
+                        ? "bg-[var(--brand-primary,#D34528)] text-white shadow-sm"
                         : "bg-[#1E232B] hover:bg-[#252A34] text-[#CBD5E1] border border-white/10"
                     }`}
                   >
@@ -423,7 +455,7 @@ export function OrderTrackingModal({
                 placeholder="# замовлення"
                 value={searchIdInput}
                 onChange={(e) => setSearchIdInput(e.target.value)}
-                className="w-24 px-2 py-1 text-xs rounded-lg border border-white/10 bg-[#121417] text-[#F1F5F9] placeholder:text-[#64748B] focus:outline-none focus:border-[#E69A38]/60"
+                className="w-24 px-2 py-1 text-xs rounded-lg border border-white/10 bg-[#121417] text-[#F1F5F9] placeholder:text-[#64748B] focus:outline-none focus:border-[var(--brand-primary,#D34528)]/60"
               />
               <button
                 type="submit"
