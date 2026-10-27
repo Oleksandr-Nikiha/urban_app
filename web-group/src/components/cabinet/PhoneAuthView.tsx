@@ -3,11 +3,13 @@ import { authPhoneLogin } from "../../api/client.ts";
 import { saveSharedProfile, type UserProfile } from "../../types/user.ts";
 import { TelegramLoginWidget, type TelegramUser } from "./TelegramLoginWidget.tsx";
 
-interface PhoneAuthViewProps {
+export interface PhoneAuthViewProps {
   onTelegramAuth: (user: TelegramUser) => void;
   onPhoneAuthSuccess?: (profile: UserProfile) => void;
   onCancel?: () => void;
   authReason?: "cabinet" | "checkout" | null;
+  brandName?: string;
+  cartEmoji?: string;
 }
 
 export function PhoneAuthView({
@@ -15,6 +17,8 @@ export function PhoneAuthView({
   onPhoneAuthSuccess,
   onCancel,
   authReason,
+  brandName,
+  cartEmoji = "🛍️",
 }: PhoneAuthViewProps) {
   const [method, setMethod] = useState<"phone" | "telegram">("phone");
   const [phone, setPhone] = useState("+380");
@@ -76,12 +80,25 @@ export function PhoneAuthView({
         <h3 className="font-display text-lg sm:text-xl font-bold text-white">
           {authReason === "checkout"
             ? "Швидкий вхід для замовлення"
-            : "Авторизація в URBAN CLUB"}
+            : brandName
+            ? `Авторизація в ${brandName}`
+            : "Авторизація в Urban Bites"}
         </h3>
         <p className="text-xs text-[#94A3B8] max-w-sm mx-auto">
-          Увійдіть за номером телефону або Telegram для перегляду накопичених бонусів URBAN CLUB та історії замовлень по всій мережі
+          {authReason === "checkout"
+            ? "Увійдіть для збереження адрес, історії замовлень та нарахування бонусів URBAN CLUB"
+            : "Увійдіть за номером телефону або Telegram для перегляду накопичених бонусів та історії замовлень"}
         </p>
       </div>
+
+      {authReason === "checkout" && (
+        <div className="p-3.5 rounded-2xl bg-amber-950/40 border border-amber-500/30 text-amber-200 text-xs flex items-center gap-2.5 font-medium shadow-2xs">
+          <span className="text-lg shrink-0">{cartEmoji}</span>
+          <span className="leading-snug">
+            <strong>Ваш кошик збережено!</strong> Після входу ви одразу повернетесь до підтвердження замовлення.
+          </span>
+        </div>
+      )}
 
       {/* Перемикач способу авторизації */}
       <div className="flex bg-[#121417] p-1 rounded-2xl text-xs font-bold border border-white/10">
@@ -93,7 +110,7 @@ export function PhoneAuthView({
           }}
           className={`flex-1 py-2 px-3 rounded-xl transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
             method === "phone"
-              ? "bg-amber-500 text-[#0F1115] shadow-xs"
+              ? "bg-[var(--brand-primary,#D34528)] text-white shadow-xs"
               : "text-[#94A3B8] hover:text-white"
           }`}
         >
@@ -123,7 +140,7 @@ export function PhoneAuthView({
           <div className="bg-[#181B22] p-5 sm:p-6 rounded-2xl border border-white/10 space-y-4 shadow-xl">
             <div className="space-y-1">
               <label className="block text-xs font-bold text-white">
-                Номер телефону <span className="text-amber-400">*</span>
+                Номер телефону <span className="text-[var(--brand-primary,#E2583E)]">*</span>
               </label>
               <input
                 type="tel"
@@ -131,10 +148,10 @@ export function PhoneAuthView({
                 onChange={(e) => setPhone(e.target.value)}
                 placeholder="+380 (__) ___-__-__"
                 required
-                className="w-full bg-[#121417] border border-white/15 rounded-xl px-3.5 py-2.5 text-sm font-semibold text-white placeholder:text-[#64748B] focus:outline-none focus:ring-2 focus:ring-amber-500/30 focus:border-amber-400 transition-all"
+                className="w-full bg-[#121417] border border-white/10 rounded-xl px-3.5 py-2.5 text-sm font-semibold text-white placeholder:text-[#64748B] focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary,#D34528)]/40 focus:border-[var(--brand-primary,#D34528)] transition-all"
               />
               <p className="text-[11px] text-[#94A3B8]">
-                Єдиний номер для бонусного рахунку URBAN CLUB по всій мережі Urban Bites
+                Єдиний номер для бонусного рахунку URBAN CLUB по всій мережі
               </p>
             </div>
 
@@ -147,12 +164,12 @@ export function PhoneAuthView({
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="Олександр"
-                className="w-full bg-[#121417] border border-white/15 rounded-xl px-3.5 py-2.5 text-sm font-semibold text-white placeholder:text-[#64748B] focus:outline-none focus:ring-2 focus:ring-amber-500/30 focus:border-amber-400 transition-all"
+                className="w-full bg-[#121417] border border-white/10 rounded-xl px-3.5 py-2.5 text-sm font-semibold text-white placeholder:text-[#64748B] focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary,#D34528)]/40 focus:border-[var(--brand-primary,#D34528)] transition-all"
               />
             </div>
 
             {error && (
-              <div className="p-3 rounded-xl bg-red-950/50 border border-red-500/30 text-red-200 text-xs font-medium">
+              <div className="p-3 rounded-xl bg-red-950/40 border border-red-500/30 text-red-300 text-xs font-medium">
                 {error}
               </div>
             )}
@@ -160,7 +177,7 @@ export function PhoneAuthView({
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 disabled:opacity-50 text-[#0F1115] py-3.5 px-4 rounded-xl font-extrabold text-sm shadow-lg shadow-amber-500/20 transition-all active:scale-98 cursor-pointer flex items-center justify-center gap-2"
+              className="w-full bg-[var(--brand-primary,#D34528)] hover:opacity-90 disabled:opacity-50 text-white py-3.5 px-4 rounded-xl font-bold text-sm shadow-lg shadow-[var(--brand-primary,#D34528)]/25 transition-all active:scale-98 cursor-pointer flex items-center justify-center gap-2"
             >
               {loading ? (
                 <span>Синхронізація...</span>
@@ -179,7 +196,7 @@ export function PhoneAuthView({
       {method === "telegram" && (
         <div className="space-y-4">
           <div className="bg-[#181B22] p-6 rounded-2xl border border-white/10 flex flex-col items-center justify-center gap-4 text-center shadow-xl">
-            <div className="w-12 h-12 rounded-full bg-[#2AABEE]/20 flex items-center justify-center text-2xl text-[#2AABEE]">
+            <div className="w-12 h-12 rounded-full bg-[#2AABEE]/20 flex items-center justify-center text-2xl text-[#2AABEE] border border-[#2AABEE]/30">
               ✈️
             </div>
 
@@ -206,12 +223,12 @@ export function PhoneAuthView({
                 href={`https://t.me/${botUsername}?start=web_auth`}
                 target="_blank"
                 rel="noreferrer"
-                className="w-full bg-[#1E232B] hover:bg-[#282F3B] text-white border border-white/10 py-3 px-4 rounded-xl font-bold text-xs sm:text-sm shadow-xs transition-all flex items-center justify-center gap-2"
+                className="w-full bg-[#2A313C] hover:bg-[#343D4B] text-white py-3 px-4 rounded-xl font-bold text-xs sm:text-sm shadow-xs transition-all flex items-center justify-center gap-2 border border-white/10"
               >
                 <span>🤖</span>
                 <span>Відкрити Urban Bites Bot (@{botUsername})</span>
               </a>
-              <p className="text-[10px] text-[#64748B]">
+              <p className="text-[10px] text-[#94A3B8]">
                 У Telegram-боті також доступний зручний нативний Mini App з повним меню
               </p>
             </div>
@@ -223,15 +240,15 @@ export function PhoneAuthView({
       <div className="bg-[#181B22] p-4 rounded-xl border border-white/10 text-xs space-y-2 text-[#CBD5E1]">
         <div className="flex items-start gap-2">
           <span className="text-base shrink-0">🎁</span>
-          <span><strong className="text-white">+50 бонусів одразу:</strong> автоматично нараховуються при реєстрації (1 бонус = 1 ₴)</span>
+          <span><strong className="text-[#F1F5F9]">+50 бонусів одразу:</strong> автоматично зараховуються при вході (1 бонус = 1 ₴)</span>
         </div>
         <div className="flex items-start gap-2">
-          <span className="text-base shrink-0">💳</span>
-          <span><strong className="text-white">Кешбек до 7%:</strong> повертаємо бонуси з кожного замовлення по всій мережі</span>
+          <span className="text-base shrink-0">🔄</span>
+          <span><strong className="text-[#F1F5F9]">Єдина мережа:</strong> бонуси та історія діють по всій мережі закладів Urban Bites</span>
         </div>
         <div className="flex items-start gap-2">
           <span className="text-base shrink-0">📍</span>
-          <span><strong className="text-white">Збереження адрес:</strong> спільні адреси доставки для піци, суші та пекарні</span>
+          <span><strong className="text-[#F1F5F9]">Збереження адрес:</strong> швидке оформлення замовлення без повторного вводу</span>
         </div>
       </div>
 
@@ -239,7 +256,7 @@ export function PhoneAuthView({
         <button
           type="button"
           onClick={onCancel}
-          className="w-full text-center text-xs text-[#94A3B8] hover:text-white font-semibold pt-1 cursor-pointer"
+          className="w-full text-center text-xs text-[#94A3B8] hover:text-[#F1F5F9] font-semibold pt-1 cursor-pointer transition-colors"
         >
           ← Повернутися до кабінету
         </button>

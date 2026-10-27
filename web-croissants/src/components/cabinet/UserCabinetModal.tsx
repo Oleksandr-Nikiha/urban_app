@@ -8,19 +8,20 @@ import {
   updateWebProfile,
 } from "../../api/client.ts";
 import { useCart } from "../../context/CartContext.tsx";
+import { useModalBehavior } from "../../hooks/useModalBehavior.ts";
 import type { DeliveryAddress, ProductVariant } from "../../types/catalog.ts";
 import type { OrderOut } from "../../types/order.ts";
 import {
   clearSharedProfile,
+  CUSTOMER_STORAGE_KEY,
   getSharedCookie,
   isUserAuthenticated,
   loadSavedProfile,
+  ORDERS_HISTORY_STORAGE_KEY,
   saveSharedProfile,
+  type SavedCustomer,
   type UserProfile,
 } from "../../types/user.ts";
-import { useModalBehavior } from "../../hooks/useModalBehavior.ts";
-import { CUSTOMER_STORAGE_KEY, type SavedCustomer } from "../CheckoutModal.tsx";
-import { ORDERS_HISTORY_STORAGE_KEY } from "../OrderTrackingModal.tsx";
 import { UserAvatar } from "../ui/UserAvatar.tsx";
 import { LoyaltyBonusTab } from "./LoyaltyBonusTab.tsx";
 import { OrdersHistoryTab } from "./OrdersHistoryTab.tsx";
@@ -28,7 +29,7 @@ import { PhoneAuthView } from "./PhoneAuthView.tsx";
 import { ProfileSettingsTab } from "./ProfileSettingsTab.tsx";
 import type { TelegramUser } from "./TelegramLoginWidget.tsx";
 
-interface UserCabinetModalProps {
+export interface UserCabinetModalProps {
   isOpen: boolean;
   onClose: () => void;
   onOpenTracking: (orderId: number) => void;
@@ -37,6 +38,9 @@ interface UserCabinetModalProps {
   isAuthenticated?: boolean;
   authReason?: "cabinet" | "checkout" | null;
   onAuthSuccess?: (profile: UserProfile) => void;
+  brandTitle?: string;
+  locationSubtitle?: string;
+  cartEmoji?: string;
 }
 
 export function UserCabinetModal({
@@ -48,9 +52,11 @@ export function UserCabinetModal({
   isAuthenticated = false,
   authReason = null,
   onAuthSuccess,
+  brandTitle,
+  locationSubtitle = "м. Київ",
+  cartEmoji = "🛍️",
 }: UserCabinetModalProps) {
   useModalBehavior({ isOpen, onClose });
-
   const { addItem } = useCart();
   const [currentView, setCurrentView] = useState<"profile" | "orders" | "auth" | "loyalty">("auth");
   const [profile, setProfile] = useState<UserProfile>({
@@ -471,7 +477,7 @@ export function UserCabinetModal({
               />
             ) : (
               <div className="w-10 h-10 rounded-full bg-[#1E232B] border border-white/10 flex items-center justify-center text-lg shrink-0 text-white">
-                {authReason === "checkout" ? "🛍️" : "🔐"}
+                {authReason === "checkout" ? cartEmoji : "🔐"}
               </div>
             )}
             <div>
@@ -483,7 +489,7 @@ export function UserCabinetModal({
                   : currentView === "orders"
                   ? "Мої замовлення"
                   : currentView === "loyalty"
-                  ? "Програма лояльності"
+                  ? "Бонусна програма"
                   : currentView === "auth"
                   ? "Авторизація"
                   : profile.name
@@ -496,8 +502,6 @@ export function UserCabinetModal({
                     ? authReason === "checkout"
                       ? "Авторизуйтесь, щоб оформити замовлення"
                       : "Авторизуйтесь для перегляду профілю"
-                    : currentView === "loyalty"
-                    ? "Бонуси та клубні переваги URBAN CLUB"
                     : profile.phone ? profile.phone : "Профіль клієнта Urban Bites"}
                 </p>
                 {isAuthenticated && profile.telegram_id && (
@@ -529,6 +533,8 @@ export function UserCabinetModal({
           {!isAuthenticated || currentView === "auth" ? (
             <PhoneAuthView
               authReason={authReason}
+              brandName={brandTitle}
+              cartEmoji={cartEmoji}
               onTelegramAuth={handleTelegramAuth}
               onPhoneAuthSuccess={handlePhoneAuthSuccess}
               onCancel={isAuthenticated ? () => setCurrentView("profile") : undefined}
@@ -582,14 +588,14 @@ export function UserCabinetModal({
             ) : currentView === "loyalty" ? (
               <span>1 бонус = 1 ₴ знижки на замовлення</span>
             ) : (
-              <span>Urban Bakery & Coffee • м. Київ</span>
+              <span>{locationSubtitle}</span>
             )}
           </div>
 
           <button
             onClick={onClose}
             type="button"
-            className="bg-[#222731] hover:bg-[#2A313C] text-white py-2 px-6 rounded-xl font-bold text-xs sm:text-sm shadow-xs transition-transform active:scale-95 cursor-pointer border border-white/10"
+            className="bg-[#222732] hover:bg-[#2A313E] text-white border border-white/10 py-2 px-6 rounded-xl font-bold text-xs sm:text-sm shadow-xs transition-transform active:scale-95 cursor-pointer"
           >
             Закрити
           </button>

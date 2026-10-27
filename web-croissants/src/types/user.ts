@@ -75,6 +75,16 @@ export interface BonusTransaction {
 
 export const USER_PROFILE_STORAGE_KEY = "urban_user_profile_v1";
 export const LEGACY_PROFILE_STORAGE_KEY = "doma_user_profile_v1";
+export const CUSTOMER_STORAGE_KEY = "urban_customer_details_v1";
+export const ORDERS_HISTORY_STORAGE_KEY = "urban_orders_history";
+
+export interface SavedCustomer {
+  name: string;
+  phone: string;
+  street: string;
+  house: string;
+  apartment: string;
+}
 
 export function isUserAuthenticated(profile: UserProfile | null | undefined): boolean {
   if (!profile) return false;

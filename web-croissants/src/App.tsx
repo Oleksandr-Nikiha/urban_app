@@ -435,6 +435,9 @@ export function App() {
         authReason={authReason}
         onAuthSuccess={handleAuthSuccess}
         onProfileUpdated={handleProfileUpdated}
+        brandTitle="Urban Bakery & Coffee"
+        locationSubtitle="Urban Bakery & Coffee • м. Київ"
+        cartEmoji="🥐"
       />
 
       {/* Модалка відстеження замовлення наживо */}

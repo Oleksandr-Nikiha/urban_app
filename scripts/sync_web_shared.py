@@ -64,6 +64,20 @@ SHARED_MAPPINGS = [
         "web-croissants/src/components/cabinet/LoyaltyBonusTab.tsx",
         "web-group/src/components/cabinet/LoyaltyBonusTab.tsx"
     ]),
+    ("components/cabinet/PhoneAuthView.tsx", [
+        "web-pizza/src/components/cabinet/PhoneAuthView.tsx",
+        "web-croissants/src/components/cabinet/PhoneAuthView.tsx",
+        "web-group/src/components/cabinet/PhoneAuthView.tsx"
+    ]),
+    ("components/cabinet/ProfileSettingsTab.tsx", [
+        "web-pizza/src/components/cabinet/ProfileSettingsTab.tsx",
+        "web-croissants/src/components/cabinet/ProfileSettingsTab.tsx",
+        "web-group/src/components/cabinet/ProfileSettingsTab.tsx"
+    ]),
+    ("components/cabinet/UserCabinetModal.tsx", [
+        "web-pizza/src/components/cabinet/UserCabinetModal.tsx",
+        "web-croissants/src/components/cabinet/UserCabinetModal.tsx"
+    ]),
 
     # ui components
     ("components/ui/UserAvatar.tsx", [

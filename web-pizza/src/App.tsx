@@ -435,6 +435,9 @@ export function App() {
         authReason={authReason}
         onAuthSuccess={handleAuthSuccess}
         onProfileUpdated={handleProfileUpdated}
+        brandTitle="Urban Pizza & Sushi"
+        locationSubtitle="Urban Pizza & Sushi • м. Київ"
+        cartEmoji="🍕"
       />
 
       {/* Модалка відстеження замовлення наживо */}

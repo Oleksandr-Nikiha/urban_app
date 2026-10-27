@@ -10,7 +10,7 @@ import {
 } from "../../utils/phone.ts";
 import { type TelegramUser } from "./TelegramLoginWidget.tsx";
 
-interface ProfileSettingsTabProps {
+export interface ProfileSettingsTabProps {
   profile: UserProfile;
   ordersCount: number;
   activeOrdersCount: number;
@@ -36,7 +36,6 @@ export function ProfileSettingsTab({
   onOpenPhoneAuth,
   onDisconnectTelegram,
 }: ProfileSettingsTabProps) {
-  // Розбиваємо повне ім'я на прізвище та ім'я
   const initialFirstName = profile.first_name || profile.name.split(" ")[0] || "";
   const initialLastName =
     profile.last_name || (profile.name.includes(" ") ? profile.name.split(" ").slice(1).join(" ") : "");
@@ -53,6 +52,8 @@ export function ProfileSettingsTab({
   const [isEditingAdditionalAddress, setIsEditingAdditionalAddress] = useState(false);
   const [savedSuccess, setSavedSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const botUsername = import.meta.env.VITE_TELEGRAM_BOT_USERNAME || "urban_bites_tst_bot";
 
   useEffect(() => {
     setFirstName(profile.first_name || profile.name.split(" ")[0] || "");
@@ -147,7 +148,7 @@ export function ProfileSettingsTab({
       <section>
         <div
           onClick={onOpenOrders}
-          className="flex items-center justify-between rounded-2xl p-4 cursor-pointer transition-all bg-[#181B22] border border-white/10 hover:border-[#D34528]/50 shadow-lg group"
+          className="flex items-center justify-between rounded-2xl p-4 cursor-pointer transition-all bg-[#181B22] border border-white/10 hover:border-[var(--brand-primary,#D34528)]/50 shadow-lg group"
         >
           <div className="flex items-center gap-3.5">
             <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl text-xl bg-[#1F232B] group-hover:scale-105 transition-transform border border-white/5">
@@ -174,7 +175,7 @@ export function ProfileSettingsTab({
             </div>
           </div>
 
-          <div className="flex items-center gap-1 text-[#D34528] font-bold text-sm group-hover:translate-x-1 transition-transform">
+          <div className="flex items-center gap-1 text-[var(--brand-primary,#D34528)] font-bold text-sm group-hover:translate-x-1 transition-transform">
             <span>Переглянути</span>
             <span>→</span>
           </div>
@@ -198,7 +199,7 @@ export function ProfileSettingsTab({
                 value={lastName}
                 onChange={(e) => setLastName(e.target.value)}
                 placeholder="Шевченко"
-                className="w-full bg-[#121417] border border-white/10 rounded-xl px-3.5 py-2.5 text-sm text-[#F1F5F9] placeholder:text-[#64748B] focus:outline-none focus:border-[#D34528]/60 focus:ring-1 focus:ring-[#D34528]/60"
+                className="w-full bg-[#121417] border border-white/10 rounded-xl px-3.5 py-2.5 text-sm text-[#F1F5F9] placeholder:text-[#64748B] focus:outline-none focus:border-[var(--brand-primary,#D34528)]/60 focus:ring-1 focus:ring-[var(--brand-primary,#D34528)]/60"
               />
             </div>
 
@@ -212,7 +213,7 @@ export function ProfileSettingsTab({
                 value={firstName}
                 onChange={(e) => setFirstName(e.target.value)}
                 placeholder="Олександр"
-                className="w-full bg-[#121417] border border-white/10 rounded-xl px-3.5 py-2.5 text-sm text-[#F1F5F9] placeholder:text-[#64748B] focus:outline-none focus:border-[#D34528]/60 focus:ring-1 focus:ring-[#D34528]/60"
+                className="w-full bg-[#121417] border border-white/10 rounded-xl px-3.5 py-2.5 text-sm text-[#F1F5F9] placeholder:text-[#64748B] focus:outline-none focus:border-[var(--brand-primary,#D34528)]/60 focus:ring-1 focus:ring-[var(--brand-primary,#D34528)]/60"
               />
             </div>
           </div>
@@ -242,7 +243,7 @@ export function ProfileSettingsTab({
               className={`w-full bg-[#121417] border border-white/10 rounded-xl px-3.5 py-2.5 text-sm font-mono tracking-tight text-[#F1F5F9] placeholder:text-[#64748B] ${
                 profile.is_phone_verified || Boolean(profile.telegram_id)
                   ? "opacity-60 cursor-not-allowed bg-[#0F1115]"
-                  : "focus:outline-none focus:border-[#D34528]/60 focus:ring-1 focus:ring-[#D34528]/60"
+                  : "focus:outline-none focus:border-[var(--brand-primary,#D34528)]/60 focus:ring-1 focus:ring-[var(--brand-primary,#D34528)]/60"
               }`}
             />
 
@@ -253,10 +254,10 @@ export function ProfileSettingsTab({
                 </p>
                 <div className="flex flex-wrap gap-2 pt-1">
                   <a
-                    href="https://t.me/ncoffee_app_tst_bot?start=verify_phone"
+                    href={`https://t.me/${botUsername}?start=verify_phone`}
                     target="_blank"
                     rel="noreferrer"
-                    className="flex items-center justify-center gap-1.5 bg-[#D34528] hover:bg-[#B83820] text-white px-3.5 py-1.5 rounded-lg text-xs font-bold transition shadow-sm cursor-pointer"
+                    className="flex items-center justify-center gap-1.5 bg-[var(--brand-primary,#D34528)] hover:opacity-90 text-white px-3.5 py-1.5 rounded-lg text-xs font-bold transition shadow-sm cursor-pointer"
                   >
                     <span>📱</span>
                     <span>Підтвердити телефон у боті →</span>
@@ -268,7 +269,7 @@ export function ProfileSettingsTab({
                       className="flex items-center gap-1 bg-[#1F232B] border border-white/10 text-[#CBD5E1] hover:text-white hover:bg-[#252A34] px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer"
                     >
                       <span>🔑</span>
-                      <span>Вхід за кодом / паролем</span>
+                      <span>Вхід за телефоном / кодом</span>
                     </button>
                   )}
                 </div>
@@ -299,7 +300,7 @@ export function ProfileSettingsTab({
                   <button
                     type="button"
                     onClick={() => setIsEditingMainAddress(false)}
-                    className="text-xs font-semibold text-[#D34528] hover:underline cursor-pointer"
+                    className="text-xs font-semibold text-[var(--brand-primary,#D34528)] hover:underline cursor-pointer"
                   >
                     Згорнути ✕
                   </button>
@@ -316,7 +317,7 @@ export function ProfileSettingsTab({
                   value={street}
                   onChange={(e) => setStreet(e.target.value)}
                   placeholder="Введіть або оберіть вулицю..."
-                  className="w-full bg-[#121417] border border-white/10 rounded-xl px-3.5 py-2.5 text-sm text-[#F1F5F9] placeholder:text-[#64748B] focus:outline-none focus:border-[#D34528]/60 focus:ring-1 focus:ring-[#D34528]/60"
+                  className="w-full bg-[#121417] border border-white/10 rounded-xl px-3.5 py-2.5 text-sm text-[#F1F5F9] placeholder:text-[#64748B] focus:outline-none focus:border-[var(--brand-primary,#D34528)]/60 focus:ring-1 focus:ring-[var(--brand-primary,#D34528)]/60"
                 />
                 <datalist id="cabinet-streets-datalist">
                   {streetsList.map((s) => (
@@ -335,7 +336,7 @@ export function ProfileSettingsTab({
                     value={house}
                     onChange={(e) => setHouse(e.target.value)}
                     placeholder="Напр. 15, 2Д"
-                    className="w-full bg-[#121417] border border-white/10 rounded-xl px-3.5 py-2.5 text-sm text-[#F1F5F9] placeholder:text-[#64748B] focus:outline-none focus:border-[#D34528]/60 focus:ring-1 focus:ring-[#D34528]/60"
+                    className="w-full bg-[#121417] border border-white/10 rounded-xl px-3.5 py-2.5 text-sm text-[#F1F5F9] placeholder:text-[#64748B] focus:outline-none focus:border-[var(--brand-primary,#D34528)]/60 focus:ring-1 focus:ring-[var(--brand-primary,#D34528)]/60"
                   />
                 </div>
                 <div>
@@ -347,7 +348,7 @@ export function ProfileSettingsTab({
                     value={apartment}
                     onChange={(e) => setApartment(e.target.value)}
                     placeholder="Опціонально"
-                    className="w-full bg-[#121417] border border-white/10 rounded-xl px-3.5 py-2.5 text-sm text-[#F1F5F9] placeholder:text-[#64748B] focus:outline-none focus:border-[#D34528]/60 focus:ring-1 focus:ring-[#D34528]/60"
+                    className="w-full bg-[#121417] border border-white/10 rounded-xl px-3.5 py-2.5 text-sm text-[#F1F5F9] placeholder:text-[#64748B] focus:outline-none focus:border-[var(--brand-primary,#D34528)]/60 focus:ring-1 focus:ring-[var(--brand-primary,#D34528)]/60"
                   />
                 </div>
               </div>
@@ -381,7 +382,7 @@ export function ProfileSettingsTab({
               <button
                 type="button"
                 onClick={() => setIsEditingMainAddress(true)}
-                className="shrink-0 rounded-xl px-3 py-1.5 text-xs font-bold border border-white/10 bg-[#1F232B] hover:bg-[#252A34] text-[#D34528] cursor-pointer transition-colors"
+                className="shrink-0 rounded-xl px-3 py-1.5 text-xs font-bold border border-white/10 bg-[#1F232B] hover:bg-[#252A34] text-[var(--brand-primary,#D34528)] cursor-pointer transition-colors"
               >
                 {fullDeliveryAddress ? "Змінити" : "+ Додати"}
               </button>
@@ -402,7 +403,7 @@ export function ProfileSettingsTab({
                   <button
                     type="button"
                     onClick={() => setIsEditingAdditionalAddress(false)}
-                    className="text-xs font-semibold text-[#D34528] hover:underline cursor-pointer"
+                    className="text-xs font-semibold text-[var(--brand-primary,#D34528)] hover:underline cursor-pointer"
                   >
                     Згорнути ✕
                   </button>
@@ -418,7 +419,7 @@ export function ProfileSettingsTab({
                   value={additionalAddress}
                   onChange={(e) => setAdditionalAddress(e.target.value)}
                   placeholder="Напр. м. Київ, вул. Набережна, 12, офіс 4"
-                  className="w-full bg-[#121417] border border-white/10 rounded-xl px-3.5 py-2.5 text-sm text-[#F1F5F9] placeholder:text-[#64748B] focus:outline-none focus:border-[#D34528]/60 focus:ring-1 focus:ring-[#D34528]/60"
+                  className="w-full bg-[#121417] border border-white/10 rounded-xl px-3.5 py-2.5 text-sm text-[#F1F5F9] placeholder:text-[#64748B] focus:outline-none focus:border-[var(--brand-primary,#D34528)]/60 focus:ring-1 focus:ring-[var(--brand-primary,#D34528)]/60"
                 />
               </div>
             </div>
@@ -451,7 +452,7 @@ export function ProfileSettingsTab({
               <button
                 type="button"
                 onClick={() => setIsEditingAdditionalAddress(true)}
-                className="shrink-0 rounded-xl px-3 py-1.5 text-xs font-bold border border-white/10 bg-[#1F232B] hover:bg-[#252A34] text-[#D34528] cursor-pointer transition-colors"
+                className="shrink-0 rounded-xl px-3 py-1.5 text-xs font-bold border border-white/10 bg-[#1F232B] hover:bg-[#252A34] text-[var(--brand-primary,#D34528)] cursor-pointer transition-colors"
               >
                 {additionalAddress ? "Змінити" : "+ Додати"}
               </button>
@@ -472,13 +473,13 @@ export function ProfileSettingsTab({
           tabIndex={onOpenLoyalty ? 0 : undefined}
           onKeyDown={onOpenLoyalty ? (e) => (e.key === "Enter" || e.key === " " ? onOpenLoyalty() : null) : undefined}
           className={`relative overflow-hidden rounded-3xl p-5 shadow-xl bg-gradient-to-br from-[#181B22] via-[#222834] to-[#14171E] text-white border border-white/10 text-left ${
-            onOpenLoyalty ? "cursor-pointer hover:border-[#D34528]/60 hover:shadow-2xl transition-all" : ""
+            onOpenLoyalty ? "cursor-pointer hover:border-[var(--brand-primary,#D34528)]/60 hover:shadow-2xl transition-all" : ""
           }`}
         >
           <div className="flex items-start justify-between">
             <div>
               <div className="flex items-center gap-2">
-                <span className="text-xs font-extrabold uppercase tracking-widest text-[#D34528]">
+                <span className="text-xs font-extrabold uppercase tracking-widest text-[var(--brand-primary,#D34528)]">
                   URBAN CLUB
                 </span>
                 <span className="text-xs">✨</span>
@@ -487,7 +488,7 @@ export function ProfileSettingsTab({
                 {profile.name || "Гість"}
               </p>
             </div>
-            <div className="flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-bold bg-[#D34528]/20 text-[#D34528] border border-[#D34528]/30">
+            <div className="flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-bold bg-[var(--brand-primary,#D34528)]/20 text-[var(--brand-primary,#D34528)] border border-[var(--brand-primary,#D34528)]/30">
               <span>●</span>
               <span>Active</span>
             </div>
@@ -507,7 +508,7 @@ export function ProfileSettingsTab({
               <p className="text-[10px] uppercase tracking-wider text-[#94A3B8]">
                 Бонуси
               </p>
-              <p className="text-xl font-extrabold text-[#D34528]">
+              <p className="text-xl font-extrabold text-[var(--brand-primary,#D34528)]">
                 {bonusBalance} <span className="text-xs font-semibold opacity-70">бал.</span>
               </p>
             </div>
@@ -518,7 +519,7 @@ export function ProfileSettingsTab({
               Бонусна програма: нарахування та оплата замовлень балами у закладах Urban Bites.
             </p>
             {onOpenLoyalty && (
-              <span className="text-[11px] font-bold text-[#D34528] shrink-0 ml-2 hover:underline">
+              <span className="text-[11px] font-bold text-[var(--brand-primary,#D34528)] shrink-0 ml-2 hover:underline">
                 Деталі →
               </span>
             )}
@@ -530,7 +531,7 @@ export function ProfileSettingsTab({
       <div className="pt-2">
         <button
           type="submit"
-          className="w-full bg-[#D34528] hover:bg-[#B83820] text-white py-3 rounded-xl font-bold text-sm shadow-lg shadow-[#D34528]/20 transition-transform active:scale-95 cursor-pointer"
+          className="w-full bg-[var(--brand-primary,#D34528)] hover:opacity-90 text-white py-3 rounded-xl font-bold text-sm shadow-lg shadow-[var(--brand-primary,#D34528)]/20 transition-transform active:scale-95 cursor-pointer"
         >
           Зберегти зміни
         </button>
@@ -558,7 +559,7 @@ export function ProfileSettingsTab({
           <button
             type="button"
             onClick={onOpenPhoneAuth}
-            className="text-[#D34528] hover:underline font-bold cursor-pointer"
+            className="text-[var(--brand-primary,#D34528)] hover:underline font-bold cursor-pointer"
           >
             Увійти через інший акаунт →
           </button>

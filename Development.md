@@ -34,8 +34,9 @@ UX замовлення у **Telegram Mini App**, залишивши бота д
     - Перевірено та підтверджено модульну архітектуру терміналу: ізольовані компоненти карток, чека, розрахунку квот безкоштовних опцій та зміни касира.
   - **Крок 4. Усунення дублювання коду сайтів (`web-shared`):**
     - Створено централізований репозиторій спільного коду `web-shared/`: спільні типи (`catalog.ts`, `cart.ts`, `order.ts`, `user.ts`), утиліти (`phone.ts`, `bonus.ts`, `productOptions.ts`), хуки (`useModalBehavior.ts`, `useScrollSpy.ts`), API лояльності (`bonuses.ts`), спільні вкладки кабінету (`TelegramLoginWidget`, `OrdersHistoryTab`, `LoyaltyBonusTab`) та `UserAvatar`.
+    - Повністю уніфіковано та винесено в `web-shared` весь модуль кабінету клієнта: `UserCabinetModal.tsx`, `PhoneAuthView.tsx`, `ProfileSettingsTab.tsx` з параметризацією бренду (`brandTitle`, `locationSubtitle`, `cartEmoji`) та бота для верифікації (`VITE_TELEGRAM_BOT_USERNAME`).
     - Уніфіковано `CartContext.tsx` завдяки параметризованому `storageKey`.
-    - Впроваджено CSS-змінну `--brand-primary` для гнучкої тематизації аватарів та кнопок під бренди закладів (`#D34528` Pizza, `#E69A38` Croissants, `#F59E0B` Group).
+    - Впроваджено CSS-змінну `--brand-primary` для гнучкої тематизації аватарів, кнопок та полів під бренди закладів (`#D34528` Pizza, `#E69A38` Croissants, `#F59E0B` Group).
     - Створено автоматичний синхронізатор `scripts/sync_web_shared.py` (з режимом `--check`) та інтегровано його у загальний валідатор `scripts/check_frontend_contracts.py`.
   - **Верифікація:** Успішна збірка всіх 6 контейнерів (`frontend`, `web-admin`, `web-pos`, `web-pizza`, `web-croissants`, `web-group`), 178/178 автотестів бекенду пройдено на 100%.
 
