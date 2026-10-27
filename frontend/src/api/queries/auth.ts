@@ -86,7 +86,7 @@ export function useUpdateProfile() {
 
 export function useMyBonusHistory() {
   return useQuery({
-    queryKey: ["me", "bonuses", "history"],
+    queryKey: keys.bonusHistory,
     queryFn: () => api.get<BonusTransaction[]>("/me/bonuses/history"),
     staleTime: 30_000,
   });

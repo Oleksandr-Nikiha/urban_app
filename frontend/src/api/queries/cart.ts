@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import {
   useMutation,
   useQuery,
@@ -7,6 +8,7 @@ import {
 
 import { ApiError, api, hasTelegramAuth } from "@/api/client";
 import {
+  GUEST_CART_EVENT,
   addGuestItem,
   clearGuestCart,
   getGuestCart,
@@ -54,6 +56,19 @@ export async function isRegisteredUser(qc: QueryClient): Promise<boolean> {
 
 export function useCart() {
   const qc = useQueryClient();
+
+  useEffect(() => {
+    const handler = () => {
+      void qc.invalidateQueries({ queryKey: keys.cart });
+    };
+    window.addEventListener(GUEST_CART_EVENT, handler);
+    window.addEventListener("storage", handler);
+    return () => {
+      window.removeEventListener(GUEST_CART_EVENT, handler);
+      window.removeEventListener("storage", handler);
+    };
+  }, [qc]);
+
   return useQuery({
     queryKey: keys.cart,
     queryFn: async () => {

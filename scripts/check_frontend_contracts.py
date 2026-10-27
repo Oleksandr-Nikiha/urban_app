@@ -107,6 +107,15 @@ def main() -> int:
         )
     )
 
+    # 5. Web Shared Code Sync Check
+    try:
+        from sync_web_shared import check_sync
+        sync_diffs = check_sync()
+        if sync_diffs:
+            errors.extend([f"Web Shared розбіжність: {d}" for d in sync_diffs])
+    except ImportError:
+        pass
+
     if errors:
         print("❌ Виявлено розбіжності контрактів фронтенду:")
         for err in errors:

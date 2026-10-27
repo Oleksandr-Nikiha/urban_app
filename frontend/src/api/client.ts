@@ -149,26 +149,4 @@ export const api = {
   patch: <T>(path: string, body?: unknown) =>
     request<T>(path, { method: "PATCH", body: body ? JSON.stringify(body) : undefined }),
   delete: <T>(path: string) => request<T>(path, { method: "DELETE" }),
-  upload: async <T>(path: string, formData: FormData): Promise<T> => {
-    const res = await fetch(`${BASE_URL}${path}`, {
-      method: "POST",
-      headers: authHeaders(),
-      body: formData,
-    });
-    if (!res.ok) {
-      if (res.status === 401 && (path.startsWith("/admin") || path.startsWith("/api/admin"))) {
-        removeAdminToken();
-      }
-      let detail = `HTTP ${res.status}`;
-      try {
-        const body = await res.json();
-        if (typeof body?.detail === "string") detail = body.detail;
-        else if (Array.isArray(body?.detail)) detail = body.detail[0]?.msg ?? detail;
-      } catch {
-        /* empty */
-      }
-      throw new ApiError(res.status, detail);
-    }
-    return res.json() as Promise<T>;
-  },
 };

@@ -20,6 +20,25 @@ UX замовлення у **Telegram Mini App**, залишивши бота д
 
 **Готово:**
 
+- **Почерговий рефакторинг фронтенд-модулів та ліквідація дублювання сайтів (2026-10-27):**
+  - **Крок 1. Очищення Frontend (Telegram Mini App):**
+    - Видалено 15 застарілих admin-ключів із `frontend/src/api/queries/keys.ts`, що залишилися після винесення адмінки в окремий сервіс `web-admin` (збережено лише `adminMe` для `AdminStaffBanner`).
+    - Централізовано ключ `keys.bonusHistory` у `auth.ts`.
+    - Додано автоматичну реактивну підписку на події гостьового кошика (`GUEST_CART_EVENT`, `storage`) у `useCart` для миттєвої синхронізації бейджа кошика без зайвих запитів.
+    - Очищено `frontend/src/api/client.ts` від рудиментного `api.upload`.
+  - **Крок 2. Видалення мертвого коду в Web Admin (`web-admin`):**
+    - Видалено понад 700 рядків клієнтського коду, що перекочував при екстракції: `src/store/guestCart.ts`, `src/api/queries/cart.ts` та клієнтські мутації замовлень `src/api/queries/orders.ts`.
+    - Видалено неактуальний клієнтський `auth.ts` (адмінка використовує `adminOperations.ts` та прямий вхід через `/api/admin/auth`).
+    - Очищено `queries.ts` та `keys.ts` від рудиментних сутностей кошика.
+  - **Крок 3. Ревізія Web POS (`web-pos`):**
+    - Перевірено та підтверджено модульну архітектуру терміналу: ізольовані компоненти карток, чека, розрахунку квот безкоштовних опцій та зміни касира.
+  - **Крок 4. Усунення дублювання коду сайтів (`web-shared`):**
+    - Створено централізований репозиторій спільного коду `web-shared/`: спільні типи (`catalog.ts`, `cart.ts`, `order.ts`, `user.ts`), утиліти (`phone.ts`, `bonus.ts`, `productOptions.ts`), хуки (`useModalBehavior.ts`, `useScrollSpy.ts`), API лояльності (`bonuses.ts`), спільні вкладки кабінету (`TelegramLoginWidget`, `OrdersHistoryTab`, `LoyaltyBonusTab`) та `UserAvatar`.
+    - Уніфіковано `CartContext.tsx` завдяки параметризованому `storageKey`.
+    - Впроваджено CSS-змінну `--brand-primary` для гнучкої тематизації аватарів та кнопок під бренди закладів (`#D34528` Pizza, `#E69A38` Croissants, `#F59E0B` Group).
+    - Створено автоматичний синхронізатор `scripts/sync_web_shared.py` (з режимом `--check`) та інтегровано його у загальний валідатор `scripts/check_frontend_contracts.py`.
+  - **Верифікація:** Успішна збірка всіх 6 контейнерів (`frontend`, `web-admin`, `web-pos`, `web-pizza`, `web-croissants`, `web-group`), 178/178 автотестів бекенду пройдено на 100%.
+
 - **Спільні типи та контракти фронтенду (Синхронізація TypeScript-інтерфейсів із бекендом, 2026-10-27):**
   - **Синхронізація моделей даних з Pydantic v2:**
     - Уніфіковано типи `ProductVariant.weight`: виправлено тип з `number | null` на `string | null` у `web-croissants`, `web-pizza`, `web-group` відповідно до схеми бекенду `ProductVariantOut.weight: str | None` та формату бази даних (текстові значення ваги/розміру на кшталт `"25 см / 550 г"`).

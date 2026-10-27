@@ -11,7 +11,7 @@ if (!rootElement) {
 
 createRoot(rootElement).render(
   <StrictMode>
-    <CartProvider>
+    <CartProvider storageKey="urban_croissants_cart_v1">
       <App />
     </CartProvider>
   </StrictMode>,

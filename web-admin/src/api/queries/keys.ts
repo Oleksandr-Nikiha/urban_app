@@ -1,13 +1,9 @@
 /** Ключі кешу зібрані в одному місці — щоб інвалідація не розповзалась по компонентах. */
 export const keys = {
-  me: ["me"] as const,
   categories: ["categories"] as const,
   products: (categoryId: number) => ["products", categoryId] as const,
   product: (productId: number) => ["product", productId] as const,
-  cart: ["cart"] as const,
   locations: ["locations"] as const,
-  orders: ["orders"] as const,
-  order: (orderId: number) => ["order", orderId] as const,
   adminMe: ["admin", "me"] as const,
   adminManagers: ["admin", "managers"] as const,
   adminCategories: (locationId?: number | null) => ["admin", "categories", locationId] as const,

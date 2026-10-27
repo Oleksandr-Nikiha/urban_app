@@ -254,7 +254,6 @@ export function useUpdateAdminOrder() {
     onSuccess: (_, vars) => {
       void qc.invalidateQueries({ queryKey: keys.adminOrder(vars.orderId) });
       void qc.invalidateQueries({ queryKey: ["admin", "orders"] });
-      void qc.invalidateQueries({ queryKey: keys.order(vars.orderId) });
     },
   });
 }

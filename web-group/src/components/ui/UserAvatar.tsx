@@ -1,11 +1,12 @@
 import { useState } from "react";
 
-interface UserAvatarProps {
+export interface UserAvatarProps {
   avatarUrl?: string | null;
   name?: string | null;
   size?: "xs" | "sm" | "md" | "lg" | "xl";
   className?: string;
   alt?: string;
+  accentColor?: string;
 }
 
 export function UserAvatar({
@@ -14,6 +15,7 @@ export function UserAvatar({
   size = "md",
   className = "",
   alt = "Користувач",
+  accentColor,
 }: UserAvatarProps) {
   const [imgError, setImgError] = useState(false);
 
@@ -37,11 +39,14 @@ export function UserAvatar({
     xl: "w-16 h-16 text-xl",
   }[size];
 
+  const primaryColor = accentColor || "var(--brand-primary, #D34528)";
+
   // Якщо є URL фотографії і вона не видала помилки
   if (avatarUrl && !imgError) {
     return (
       <div
-        className={`relative inline-flex shrink-0 items-center justify-center rounded-full overflow-hidden border-2 border-amber-500/50 shadow-xs bg-[#181B22] ${sizeClasses} ${className}`}
+        className={`relative inline-flex shrink-0 items-center justify-center rounded-full overflow-hidden border-2 shadow-xs bg-[#181B22] ${sizeClasses} ${className}`}
+        style={{ borderColor: primaryColor }}
       >
         <img
           src={avatarUrl}
@@ -58,7 +63,10 @@ export function UserAvatar({
   // Якщо фото немає або помилка завантаження -> дизайнерська заглушка з монограмою або іконкою
   return (
     <div
-      className={`relative inline-flex shrink-0 items-center justify-center rounded-full select-none font-bold tracking-tight shadow-xs border-2 border-white/15 bg-gradient-to-br from-[#181B22] via-[#2A231C] to-amber-500 text-white ${sizeClasses} ${className}`}
+      className={`relative inline-flex shrink-0 items-center justify-center rounded-full select-none font-bold tracking-tight shadow-xs border-2 border-white/10 text-white ${sizeClasses} ${className}`}
+      style={{
+        background: `linear-gradient(135deg, #1E232B 0%, #2A2520 50%, ${primaryColor} 100%)`,
+      }}
       title={name || "Профіль користувача"}
     >
       {initials ? (
@@ -80,4 +88,3 @@ export function UserAvatar({
     </div>
   );
 }
-

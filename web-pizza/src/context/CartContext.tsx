@@ -2,7 +2,7 @@ import { createContext, useContext, useEffect, useState, type ReactNode } from "
 import type { CartItem, SelectedOptionWithGroup } from "../types/cart.ts";
 import type { ProductVariant } from "../types/catalog.ts";
 
-interface CartContextType {
+export interface CartContextType {
   items: CartItem[];
   totalQty: number;
   totalPrice: number;
@@ -22,13 +22,16 @@ interface CartContextType {
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
 
-const STORAGE_KEY = "urban_pizza_cart_v1";
+export interface CartProviderProps {
+  children: ReactNode;
+  storageKey?: string;
+}
 
-export function CartProvider({ children }: { children: ReactNode }) {
+export function CartProvider({ children, storageKey = "urban_cart_v1" }: CartProviderProps) {
   const [items, setItems] = useState<CartItem[]>(() => {
     if (typeof window === "undefined") return [];
     try {
-      const saved = localStorage.getItem(STORAGE_KEY);
+      const saved = localStorage.getItem(storageKey);
       return saved ? JSON.parse(saved) : [];
     } catch {
       return [];
@@ -37,11 +40,11 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
+      localStorage.setItem(storageKey, JSON.stringify(items));
     } catch (e) {
       console.error("Не вдалося зберегти кошик у localStorage", e);
     }
-  }, [items]);
+  }, [items, storageKey]);
 
   const addItem = ({
     productId,
@@ -151,4 +154,3 @@ export function useCart() {
   }
   return context;
 }
-
