@@ -382,7 +382,7 @@ class AdminOrderListItemOut(BaseModel):
     user_is_blocked: bool = False
     user_admin_note: str | None = None
     source: str = "telegram"
-    table_number: int | None = None
+    table_number: str | int | None = None
     staff_name: str | None = None
 
 
@@ -402,7 +402,7 @@ class AdminOrderDetailOut(BaseModel):
     user_is_blocked: bool = False
     user_admin_note: str | None = None
     source: str = "telegram"
-    table_number: int | None = None
+    table_number: str | int | None = None
     staff_name: str | None = None
     groups: list[AdminOrderGroupOut] = []
 

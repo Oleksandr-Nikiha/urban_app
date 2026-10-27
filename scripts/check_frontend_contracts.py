@@ -39,7 +39,7 @@ def main() -> int:
         "first_name?: string | null;",
         "bonus_spent?: number;",
         "bonus_to_spend?: number | null;",
-        "table_number?: number | null;",
+        "table_number?: string | number | null;",
         "staff_name?: string | null;",
         "image_url: string | null;",
     ]

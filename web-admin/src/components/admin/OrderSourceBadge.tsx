@@ -1,6 +1,6 @@
 interface OrderSourceBadgeProps {
   source?: string | null;
-  tableNumber?: number | null;
+  tableNumber?: string | number | null;
   staffName?: string | null;
   showDetails?: boolean;
 }
@@ -35,7 +35,9 @@ export function OrderSourceBadge({
               color: "#059669",
             }}
           >
-            Стіл #{tableNumber}
+            {/^\d+$/.test(String(tableNumber).trim())
+              ? `Стіл #${tableNumber}`
+              : String(tableNumber)}
           </span>
         )}
         {showDetails && staffName && (
