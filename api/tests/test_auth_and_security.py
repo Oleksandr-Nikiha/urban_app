@@ -1010,6 +1010,33 @@ class TestSecurityVulnerabilityFixes:
             if test_file.exists():
                 test_file.unlink()
 
+    async def test_error_notifier_cooldown(self, monkeypatch):
+        """Перевірка формування алерта 500 та захисту від спаму (cooldown)."""
+        from unittest.mock import AsyncMock
+
+        from starlette.requests import Request
+
+        from src.services.error_notifier import _recent_alerts, notify_server_error
+
+        mock_send = AsyncMock(return_value=True)
+        monkeypatch.setattr("src.services.error_notifier.send_telegram_message", mock_send)
+        _recent_alerts.clear()
+
+        scope = {"type": "http", "method": "GET", "path": "/api/test-crash", "headers": []}
+        req = Request(scope)
+        err = RuntimeError("Test critical crash")
+
+        # Перший виклик - надсилає повідомлення
+        await notify_server_error(req, err)
+        assert mock_send.call_count == 1
+        call_text = mock_send.call_args[1]["text"]
+        assert "Критичний збій API" in call_text
+        assert "Test critical crash" in call_text
+
+        # Другий виклик того ж запиту одразу - спрацьовує cooldown, повторно не шле
+        await notify_server_error(req, err)
+        assert mock_send.call_count == 1
+
 
 
 

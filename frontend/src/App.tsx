@@ -1,20 +1,22 @@
-import { useEffect } from "react";
+import { Suspense, lazy, useEffect } from "react";
 import { Navigate, Route, Routes, useLocation, useNavigate } from "react-router-dom";
 
 import { ApiError, getAdminToken } from "@/api/client";
 import { useAdminMe, useMe } from "@/api/queries";
 import { Layout } from "@/components/Layout";
 import { ErrorBox, Spinner } from "@/components/ui";
-import { CartPage } from "@/pages/CartPage";
 import { CategoriesPage } from "@/pages/CategoriesPage";
-import { CheckoutPage } from "@/pages/CheckoutPage";
-import { ContactsPage } from "@/pages/ContactsPage";
-import { OrderSuccessPage } from "@/pages/OrderSuccessPage";
-import { OrdersPage } from "@/pages/OrdersPage";
-import { ProductPage } from "@/pages/ProductPage";
-import { ProductsPage } from "@/pages/ProductsPage";
-import { ProfilePage } from "@/pages/ProfilePage";
-import { RegisterPage } from "@/pages/RegisterPage";
+
+// Легкі динамічні імпорти другорядних сторінок для code-splitting та прискорення старту TMA
+const CartPage = lazy(() => import("@/pages/CartPage").then((m) => ({ default: m.CartPage })));
+const CheckoutPage = lazy(() => import("@/pages/CheckoutPage").then((m) => ({ default: m.CheckoutPage })));
+const ContactsPage = lazy(() => import("@/pages/ContactsPage").then((m) => ({ default: m.ContactsPage })));
+const OrderSuccessPage = lazy(() => import("@/pages/OrderSuccessPage").then((m) => ({ default: m.OrderSuccessPage })));
+const OrdersPage = lazy(() => import("@/pages/OrdersPage").then((m) => ({ default: m.OrdersPage })));
+const ProductPage = lazy(() => import("@/pages/ProductPage").then((m) => ({ default: m.ProductPage })));
+const ProductsPage = lazy(() => import("@/pages/ProductsPage").then((m) => ({ default: m.ProductsPage })));
+const ProfilePage = lazy(() => import("@/pages/ProfilePage").then((m) => ({ default: m.ProfilePage })));
+const RegisterPage = lazy(() => import("@/pages/RegisterPage").then((m) => ({ default: m.RegisterPage })));
 
 import {
   getTelegramStartParam,
@@ -152,23 +154,31 @@ export function App() {
   }
 
   return (
-    <Routes>
-      <Route element={<Layout />}>
-        <Route path="/" element={<CategoriesPage />} />
-        <Route path="/categories/:categoryId" element={<ProductsPage />} />
-        <Route path="/cart" element={<CartPage />} />
-        <Route path="/contacts" element={<ContactsPage />} />
-        <Route path="/profile" element={<ProfilePage />} />
-        <Route path="/orders" element={<OrdersPage />} />
-      </Route>
-      {/* Картка товару, чекаут, реєстрація, екран успіху — без клієнтської нижньої панелі */}
-      <Route path="/admin/*" element={<AdminRedirect />} />
-      <Route path="/admin" element={<AdminRedirect />} />
-      <Route path="/register" element={<RegisterPage />} />
-      <Route path="/products/:productId" element={<ProductPage />} />
-      <Route path="/checkout" element={<CheckoutPage />} />
-      <Route path="/orders/:orderId/success" element={<OrderSuccessPage />} />
-      <Route path="*" element={<Navigate to="/" replace />} />
-    </Routes>
+    <Suspense
+      fallback={
+        <div className="flex min-h-[60vh] items-center justify-center">
+          <Spinner />
+        </div>
+      }
+    >
+      <Routes>
+        <Route element={<Layout />}>
+          <Route path="/" element={<CategoriesPage />} />
+          <Route path="/categories/:categoryId" element={<ProductsPage />} />
+          <Route path="/cart" element={<CartPage />} />
+          <Route path="/contacts" element={<ContactsPage />} />
+          <Route path="/profile" element={<ProfilePage />} />
+          <Route path="/orders" element={<OrdersPage />} />
+        </Route>
+        {/* Картка товару, чекаут, реєстрація, екран успіху — без клієнтської нижньої панелі */}
+        <Route path="/admin/*" element={<AdminRedirect />} />
+        <Route path="/admin" element={<AdminRedirect />} />
+        <Route path="/register" element={<RegisterPage />} />
+        <Route path="/products/:productId" element={<ProductPage />} />
+        <Route path="/checkout" element={<CheckoutPage />} />
+        <Route path="/orders/:orderId/success" element={<OrderSuccessPage />} />
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    </Suspense>
   );
 }

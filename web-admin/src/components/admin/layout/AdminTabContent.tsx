@@ -1,15 +1,17 @@
+import { Suspense, lazy } from "react";
 import { haptic, closeMiniApp } from "@/telegram/sdk";
-import { AnalyticsTab } from "@/components/admin/AnalyticsTab";
-import { BroadcastsTab } from "@/components/admin/BroadcastsTab";
-import { OrdersTab } from "@/components/admin/OrdersTab";
-import { CatalogTab } from "@/components/admin/CatalogTab";
-import { OptionGroupsTab } from "@/components/admin/OptionGroupsTab";
-import { StopListTab } from "@/components/admin/StopListTab";
-import { DeliverySettingsTab } from "@/components/admin/DeliverySettingsTab";
-import { UsersTab } from "@/components/admin/UsersTab";
-import { ManagersTab } from "@/components/admin/ManagersTab";
 import type { AdminTab } from "./types";
 import type { AdminMe, Location } from "@/api/types";
+
+const AnalyticsTab = lazy(() => import("@/components/admin/AnalyticsTab").then((m) => ({ default: m.AnalyticsTab })));
+const BroadcastsTab = lazy(() => import("@/components/admin/BroadcastsTab").then((m) => ({ default: m.BroadcastsTab })));
+const OrdersTab = lazy(() => import("@/components/admin/OrdersTab").then((m) => ({ default: m.OrdersTab })));
+const CatalogTab = lazy(() => import("@/components/admin/CatalogTab").then((m) => ({ default: m.CatalogTab })));
+const OptionGroupsTab = lazy(() => import("@/components/admin/OptionGroupsTab").then((m) => ({ default: m.OptionGroupsTab })));
+const StopListTab = lazy(() => import("@/components/admin/StopListTab").then((m) => ({ default: m.StopListTab })));
+const DeliverySettingsTab = lazy(() => import("@/components/admin/DeliverySettingsTab").then((m) => ({ default: m.DeliverySettingsTab })));
+const UsersTab = lazy(() => import("@/components/admin/UsersTab").then((m) => ({ default: m.UsersTab })));
+const ManagersTab = lazy(() => import("@/components/admin/ManagersTab").then((m) => ({ default: m.ManagersTab })));
 
 interface AdminTabContentProps {
   activeTab: AdminTab;
@@ -38,39 +40,47 @@ export function AdminTabContent({
 }: AdminTabContentProps) {
   return (
     <div className="mt-4 px-4 md:px-8 max-w-7xl pb-12">
-      {activeTab === "orders" && (
-        <OrdersTab
-          locationId={effectiveLocationId}
-          initialEditingOrderId={initialOrderId}
-          onCloseEditingOrder={onCloseEditingOrder}
-        />
-      )}
-      {activeTab === "analytics" && isSuperAdmin && (
-        <AnalyticsTab locationId={effectiveLocationId} />
-      )}
-      {activeTab === "broadcasts" && isSuperAdmin && <BroadcastsTab />}
-      {activeTab === "catalog" && (
-        <CatalogTab
-          locationId={effectiveLocationId}
-          locations={locations}
-          isSuperAdmin={adminMe.role === "admin"}
-          userLocationId={adminMe.location_id}
-        />
-      )}
-      {activeTab === "options" && <OptionGroupsTab />}
-      {activeTab === "stoplist" && <StopListTab locationId={effectiveLocationId} />}
-      {activeTab === "delivery" && (
-        <DeliverySettingsTab
-          locationId={effectiveLocationId}
-          isSuperAdmin={adminMe.role === "admin"}
-        />
-      )}
-      {activeTab === "users" && isSuperAdmin && (
-        <UsersTab locations={locations} isSuperAdmin={isSuperAdmin} />
-      )}
-      {activeTab === "managers" && isSuperAdmin && (
-        <ManagersTab locations={locations} />
-      )}
+      <Suspense
+        fallback={
+          <div className="flex h-64 items-center justify-center">
+            <div className="w-8 h-8 rounded-full border-2 border-amber-500 border-t-transparent animate-spin" />
+          </div>
+        }
+      >
+        {activeTab === "orders" && (
+          <OrdersTab
+            locationId={effectiveLocationId}
+            initialEditingOrderId={initialOrderId}
+            onCloseEditingOrder={onCloseEditingOrder}
+          />
+        )}
+        {activeTab === "analytics" && isSuperAdmin && (
+          <AnalyticsTab locationId={effectiveLocationId} />
+        )}
+        {activeTab === "broadcasts" && isSuperAdmin && <BroadcastsTab />}
+        {activeTab === "catalog" && (
+          <CatalogTab
+            locationId={effectiveLocationId}
+            locations={locations}
+            isSuperAdmin={adminMe.role === "admin"}
+            userLocationId={adminMe.location_id}
+          />
+        )}
+        {activeTab === "options" && <OptionGroupsTab />}
+        {activeTab === "stoplist" && <StopListTab locationId={effectiveLocationId} />}
+        {activeTab === "delivery" && (
+          <DeliverySettingsTab
+            locationId={effectiveLocationId}
+            isSuperAdmin={adminMe.role === "admin"}
+          />
+        )}
+        {activeTab === "users" && isSuperAdmin && (
+          <UsersTab locations={locations} isSuperAdmin={isSuperAdmin} />
+        )}
+        {activeTab === "managers" && isSuperAdmin && (
+          <ManagersTab locations={locations} />
+        )}
+      </Suspense>
 
       {/* Кнопка повернення до меню ресторану внизу сторінки (мобільна) */}
       <div className="md:hidden mt-8 px-4 pb-6 space-y-2">

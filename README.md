@@ -406,7 +406,7 @@ curl -s -X POST localhost:8010/api/cart/items \
 ```bash
 ruff check api bot                                    # лінт (конфіг — ruff.toml)
 python -m compileall -q api/src bot/src
-pytest                                                # запуск 143 автотестів (pytest.ini)
+pytest                                                # запуск 191 автотестів (pytest.ini)
 docker compose -f docker-compose.dev.yml config -q    # валідність compose
 docker run --rm -v "$PWD/caddy/Caddyfile:/etc/caddy/Caddyfile:ro" \
   caddy:2-alpine caddy validate --adapter caddyfile --config /etc/caddy/Caddyfile # синтаксис caddy

@@ -39,3 +39,6 @@ exports/
 
 *.xlsx
 uploads/
+# --- E2E Screenshots ---
+media/
+

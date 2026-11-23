@@ -28,6 +28,7 @@ from src.routers import (
     web_auth,
 )
 from src.services.cache import invalidate_catalog_cache
+from src.services.error_notifier import notify_server_error
 
 mimetypes.add_type("image/webp", ".webp")
 
@@ -191,6 +192,20 @@ async def auto_invalidate_catalog_cache_middleware(request: Request, call_next):
             except Exception as exc:
                 logger.warning("Помилка автоматичної інвалідації кешу: %s", exc)
     return response
+
+
+@app.exception_handler(Exception)
+async def unhandled_exception_handler(request: Request, exc: Exception):
+    """Глобальний обробник непередбачуваних критичних збоїв: логування та алерт у Telegram."""
+    logger.exception("🚨 Необроблена помилка сервера при запиті %s %s: %s", request.method, request.url.path, exc)
+    try:
+        asyncio.create_task(notify_server_error(request, exc))
+    except Exception as notify_err:
+        logger.warning("Не вдалося створити таску сповіщення про помилку: %s", notify_err)
+    return JSONResponse(
+        status_code=500,
+        content={"detail": "Внутрішня помилка сервера. Адміністраторів сповіщено."},
+    )
 
 
 app.include_router(catalog.router)
