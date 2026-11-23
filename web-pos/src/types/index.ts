@@ -201,7 +201,9 @@ export interface PosAddItemsPayload {
 }
 
 export interface PosCloseTablePayload {
-  payment_method: "cash" | "card";
+  payment_method: "cash" | "card" | "mixed";
+  cash_amount?: number;
+  card_amount?: number;
   bonus_spent?: number;
   discount_percent?: number;
   customer_phone?: string;

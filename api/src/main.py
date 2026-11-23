@@ -6,7 +6,7 @@ from contextlib import asynccontextmanager, suppress
 from pathlib import Path
 
 import asyncpg
-from fastapi import FastAPI, Request
+from fastapi import Depends, FastAPI, HTTPException, Request, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.openapi.docs import get_redoc_html, get_swagger_ui_html
 from fastapi.responses import JSONResponse
@@ -110,11 +110,13 @@ async def lifespan(app: FastAPI):
     await disconnect_db()
 
 
+_settings = get_settings()
+
 app = FastAPI(
     title="Urban Bites API",
     docs_url=None,
     redoc_url=None,
-    openapi_url="/api/openapi.json",
+    openapi_url="/api/openapi.json" if _settings.api_debug else None,
     servers=[
         {"url": "/urban-bites", "description": "Reverse Proxy (/urban-bites)"},
         {"url": "", "description": "Direct / Local"},
@@ -125,9 +127,11 @@ app = FastAPI(
 
 @app.get("/api/docs", include_in_schema=False)
 @app.get("/docs", include_in_schema=False)
-async def swagger_ui_html():
+async def swagger_ui_html(settings=Depends(get_settings)):
+    if not settings.api_debug:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not Found")
     return get_swagger_ui_html(
-        openapi_url="openapi.json",
+        openapi_url="/api/openapi.json",
         title=f"{app.title} - Swagger UI",
         swagger_favicon_url="https://fastapi.tiangolo.com/img/favicon.png",
     )
@@ -135,9 +139,11 @@ async def swagger_ui_html():
 
 @app.get("/api/redoc", include_in_schema=False)
 @app.get("/redoc", include_in_schema=False)
-async def redoc_html():
+async def redoc_html(settings=Depends(get_settings)):
+    if not settings.api_debug:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not Found")
     return get_redoc_html(
-        openapi_url="openapi.json",
+        openapi_url="/api/openapi.json",
         title=f"{app.title} - ReDoc",
         redoc_favicon_url="https://fastapi.tiangolo.com/img/favicon.png",
     )

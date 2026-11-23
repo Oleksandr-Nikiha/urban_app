@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { DEFAULT_PRODUCT_IMAGE, getImageUrl } from "../api/client";
+import { DEFAULT_PRODUCT_IMAGE, getImageUrl, toggleProductAvailability } from "../api/client";
 import type { CartItemOption, OptionGroup, OptionItem, Product, ProductVariant } from "../types";
 import {
   calculateGroupPricing,
@@ -51,6 +51,21 @@ export function ProductModal({ product, onClose, onAddToCart }: ProductModalProp
   const [qty, setQty] = useState(1);
   const [comment, setComment] = useState("");
   const [showValidation, setShowValidation] = useState(false);
+  const [isAvailable, setIsAvailable] = useState(product.is_available ?? true);
+  const [togglingStopList, setTogglingStopList] = useState(false);
+
+  const handleToggleStopList = async () => {
+    setTogglingStopList(true);
+    try {
+      const next = !isAvailable;
+      await toggleProductAvailability(product.id, next);
+      setIsAvailable(next);
+    } catch (err: any) {
+      alert(err.message || "Помилка оновлення стоп-листа");
+    } finally {
+      setTogglingStopList(false);
+    }
+  };
 
   // Розрахунок вартості опцій за єдиною формулою
   let extraOptionsCostPerUnit = 0;
@@ -168,13 +183,28 @@ export function ProductModal({ product, onClose, onAddToCart }: ProductModalProp
               )}
             </div>
           </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="w-8 h-8 rounded-full bg-white/5 hover:bg-white/10 text-zinc-400 hover:text-white flex items-center justify-center transition-colors cursor-pointer shrink-0"
-          >
-            ✕
-          </button>
+          <div className="flex items-center space-x-1.5 shrink-0">
+            <button
+              type="button"
+              onClick={handleToggleStopList}
+              disabled={togglingStopList}
+              title={isAvailable ? "Поставити страву в стоп-лист" : "Повернути страву в меню"}
+              className={`px-2.5 py-1.5 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
+                isAvailable
+                  ? "bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 border-rose-500/30"
+                  : "bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-300 border-emerald-500/30"
+              }`}
+            >
+              {togglingStopList ? "..." : (isAvailable ? "🛑 В стоп-лист" : "✅ В меню")}
+            </button>
+            <button
+              type="button"
+              onClick={onClose}
+              className="w-8 h-8 rounded-full bg-white/5 hover:bg-white/10 text-zinc-400 hover:text-white flex items-center justify-center transition-colors cursor-pointer"
+            >
+              ✕
+            </button>
+          </div>
         </div>
 
         {/* Modal Scrollable Body */}

@@ -67,8 +67,14 @@ class PosAddItemsIn(BaseModel):
     items: list[PosOrderItemIn] = Field(..., min_length=1)
 
 
+class PosProductAvailabilityIn(BaseModel):
+    is_available: bool
+
+
 class PosCloseTableIn(BaseModel):
-    payment_method: Literal["cash", "card"] = "cash"
+    payment_method: Literal["cash", "card", "mixed"] = "cash"
+    cash_amount: float | None = None
+    card_amount: float | None = None
     bonus_spent: int = Field(0, ge=0)
     discount_percent: int = Field(0, ge=0, le=100)
     customer_phone: str | None = None

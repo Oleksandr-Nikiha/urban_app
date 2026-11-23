@@ -1,4 +1,5 @@
 import asyncio
+import contextlib
 import html
 import logging
 from typing import Any
@@ -23,6 +24,7 @@ from src.schemas.pos import (
     PosOrderCreateIn,
     PosOrderItemUpdateQtyIn,
     PosPinAuthIn,
+    PosProductAvailabilityIn,
     PosShiftCashOpIn,
     PosShiftCloseIn,
     PosShiftOpenIn,
@@ -177,10 +179,8 @@ async def auth_pos_by_pin(
             )
 
         if redis_client:
-            try:
+            with contextlib.suppress(Exception):
                 await redis_client.delete(fail_key)
-            except Exception:
-                pass
 
         token = create_staff_token(staff_id=row["id"], secret_key=settings.bot_token, days=7)
 
@@ -405,6 +405,31 @@ async def get_pos_menu(
         cat_list.append(c_dict)
 
     return cat_list
+
+
+@router.patch("/products/{product_id}/availability")
+async def toggle_pos_product_availability(
+    product_id: int,
+    payload: PosProductAvailabilityIn,
+    staff: asyncpg.Record = Depends(get_current_staff),
+    pool: asyncpg.Pool = Depends(get_pool),
+):
+    """Поставити страву в Стоп-лист або зняти зі стоп-листа (тільки персонал)."""
+    async with pool.acquire() as conn:
+        res = await conn.execute(
+            "UPDATE products SET is_available = $1, updated_at = now() WHERE id = $2",
+            payload.is_available,
+            product_id,
+        )
+        if res == "UPDATE 0":
+            raise HTTPException(status_code=404, detail="Страву не знайдено")
+        await conn.execute(
+            "UPDATE product_variants SET is_available = $1 WHERE product_id = $2",
+            payload.is_available,
+            product_id,
+        )
+        await conn.execute("NOTIFY catalog_cache_invalidate")
+        return {"id": product_id, "is_available": payload.is_available}
 
 
 @router.post("/orders", status_code=status.HTTP_201_CREATED)
@@ -650,7 +675,12 @@ async def create_pos_order(
     # Сповіщення в Telegram менеджерам
     summary_items = ", ".join(f"{it['product_name']} ×{it['qty']}" for it in order_items_data)
     type_str = f"В закладі (Стіл #{payload.table_number})" if payload.fulfillment_type == "dine_in" else "Takeaway (З собою)"
-    pay_str = "Готівка" if payload.payment_method == "cash" else "Картка (термінал)"
+    if payload.payment_method == "cash":
+        pay_str = "Готівка"
+    elif payload.payment_method == "card":
+        pay_str = "Картка (термінал)"
+    else:
+        pay_str = f"Змішана (Готівка: {payload.cash_amount or 0:.2f} ₴, Картка: {payload.card_amount or 0:.2f} ₴)"
 
     tg_text = (
         f"⚡ <b>Нове POS-замовлення #{order_id}</b>\n\n"
@@ -1025,7 +1055,12 @@ async def close_pos_table_order(
             logger.warning("Помилка нарахування бонусів при закритті столу #%s: %s", order_id, exc)
 
     # Сповіщення про закриття столу
-    pay_str = "Готівка" if payload.payment_method == "cash" else "Картка (термінал)"
+    if payload.payment_method == "cash":
+        pay_str = "Готівка"
+    elif payload.payment_method == "card":
+        pay_str = "Картка (термінал)"
+    else:
+        pay_str = f"Змішана (Готівка: {payload.cash_amount or 0:.2f} ₴, Картка: {payload.card_amount or 0:.2f} ₴)"
     table_str = f"Стіл #{order['table_number']}" if order["table_number"] else f"Замовлення #{order_id}"
     tg_text = (
         f"🏁 <b>{table_str} розраховано та закрито</b>\n\n"

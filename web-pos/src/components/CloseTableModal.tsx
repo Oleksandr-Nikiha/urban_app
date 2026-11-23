@@ -78,12 +78,40 @@ export function CloseTableModal({ order, onClose, onSuccess }: CloseTableModalPr
     }
   };
 
-  const handleClose = async (method: "cash" | "card") => {
+  const [showMixed, setShowMixed] = useState(false);
+  const [cashPart, setCashPart] = useState<string>("");
+  const [cardPart, setCardPart] = useState<string>("");
+
+  const handleCashPartChange = (val: string) => {
+    const clean = val.replace(/[^0-9.]/g, "");
+    setCashPart(clean);
+    const num = parseFloat(clean);
+    if (!isNaN(num) && num <= finalTotal) {
+      setCardPart((Math.round((finalTotal - num) * 100) / 100).toString());
+    } else {
+      setCardPart("");
+    }
+  };
+
+  const handleClose = async (method: "cash" | "card" | "mixed") => {
+    let cashAmt: number | undefined;
+    let cardAmt: number | undefined;
+    if (method === "mixed") {
+      cashAmt = parseFloat(cashPart);
+      cardAmt = parseFloat(cardPart);
+      if (isNaN(cashAmt) || isNaN(cardAmt) || Math.round((cashAmt + cardAmt) * 100) / 100 !== finalTotal) {
+        setErrorMsg(`Сума готівки та картки має точно дорівнювати ${finalTotal} ₴`);
+        return;
+      }
+    }
+
     setLoading(true);
     setErrorMsg(null);
     try {
       await closeTableOrder(order.id, {
         payment_method: method,
+        cash_amount: cashAmt,
+        card_amount: cardAmt,
         bonus_spent: bonusSpent,
         discount_percent: discountPercent,
         customer_phone: customer?.phone || customerPhone || undefined,
@@ -267,26 +295,87 @@ export function CloseTableModal({ order, onClose, onSuccess }: CloseTableModalPr
           </div>
 
           {/* Action Buttons */}
-          <div className="grid grid-cols-2 gap-2 pt-1 pb-2">
-            <button
-              type="button"
-              disabled={loading}
-              onClick={() => handleClose("cash")}
-              className="py-3.5 rounded-2xl bg-emerald-600 hover:bg-emerald-500 disabled:opacity-40 text-white font-extrabold text-xs shadow-lg shadow-emerald-600/20 flex flex-col items-center justify-center space-y-1 cursor-pointer transition-all active:scale-95"
-            >
-              <span className="text-lg">💵</span>
-              <span>Готівка</span>
-            </button>
-            <button
-              type="button"
-              disabled={loading}
-              onClick={() => handleClose("card")}
-              className="py-3.5 rounded-2xl bg-amber-500 hover:bg-amber-400 disabled:opacity-40 text-black font-extrabold text-xs shadow-lg shadow-amber-500/20 flex flex-col items-center justify-center space-y-1 cursor-pointer transition-all active:scale-95"
-            >
-              <span className="text-lg">💳</span>
-              <span>Картка / Термінал</span>
-            </button>
-          </div>
+          {!showMixed ? (
+            <div className="space-y-2 pt-1 pb-2">
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  disabled={loading}
+                  onClick={() => handleClose("cash")}
+                  className="py-3.5 rounded-2xl bg-emerald-600 hover:bg-emerald-500 disabled:opacity-40 text-white font-extrabold text-xs shadow-lg shadow-emerald-600/20 flex flex-col items-center justify-center space-y-1 cursor-pointer transition-all active:scale-95"
+                >
+                  <span className="text-lg">💵</span>
+                  <span>Готівка</span>
+                </button>
+                <button
+                  type="button"
+                  disabled={loading}
+                  onClick={() => handleClose("card")}
+                  className="py-3.5 rounded-2xl bg-amber-500 hover:bg-amber-400 disabled:opacity-40 text-black font-extrabold text-xs shadow-lg shadow-amber-500/20 flex flex-col items-center justify-center space-y-1 cursor-pointer transition-all active:scale-95"
+                >
+                  <span className="text-lg">💳</span>
+                  <span>Картка</span>
+                </button>
+              </div>
+              <button
+                type="button"
+                disabled={loading}
+                onClick={() => {
+                  setShowMixed(true);
+                  const half = Math.round((finalTotal / 2) * 100) / 100;
+                  setCashPart(half.toString());
+                  setCardPart((Math.round((finalTotal - half) * 100) / 100).toString());
+                }}
+                className="w-full py-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-zinc-300 font-semibold text-xs border border-white/10 flex items-center justify-center space-x-1.5 transition-colors cursor-pointer"
+              >
+                <span>🔄</span>
+                <span>Змішана оплата (готівка + картка)</span>
+              </button>
+            </div>
+          ) : (
+            <div className="space-y-3 p-3 bg-black/40 border border-amber-500/30 rounded-2xl">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-amber-300">🔄 Змішаний розрахунок</span>
+                <button
+                  type="button"
+                  onClick={() => setShowMixed(false)}
+                  className="text-[11px] text-zinc-400 hover:text-white"
+                >
+                  ✕ Скасувати
+                </button>
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="text-[10px] text-zinc-400 block mb-1">💵 Готівка (₴)</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={cashPart}
+                    onChange={(e) => handleCashPartChange(e.target.value)}
+                    className="w-full bg-[#1A1F2B] border border-white/10 rounded-xl px-2.5 py-1.5 text-xs text-white"
+                  />
+                </div>
+                <div>
+                  <label className="text-[10px] text-zinc-400 block mb-1">💳 Картка (₴)</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={cardPart}
+                    onChange={(e) => setCardPart(e.target.value)}
+                    className="w-full bg-[#1A1F2B] border border-white/10 rounded-xl px-2.5 py-1.5 text-xs text-white"
+                  />
+                </div>
+              </div>
+              <button
+                type="button"
+                disabled={loading}
+                onClick={() => handleClose("mixed")}
+                className="w-full py-3 rounded-xl bg-amber-500 hover:bg-amber-400 text-black font-extrabold text-xs shadow-lg shadow-amber-500/20 cursor-pointer active:scale-95 transition-all"
+              >
+                {loading ? "Закриття..." : `Оплатити змішано (${finalTotal} ₴)`}
+              </button>
+            </div>
+          )}
         </div>
       </div>
 

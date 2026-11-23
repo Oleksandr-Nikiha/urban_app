@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { cancelPosOrder } from "../api/client";
+import { authByPin, cancelPosOrder } from "../api/client";
 import type { PosOrder } from "../types";
 
 interface CancelOrderModalProps {
@@ -24,6 +24,7 @@ export function CancelOrderModal({
   onSuccess,
 }: CancelOrderModalProps) {
   const [reason, setReason] = useState("");
+  const [managerPin, setManagerPin] = useState("");
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
@@ -32,11 +33,25 @@ export function CancelOrderModal({
       setErrorMsg("Будь ласка, вкажіть причину скасування");
       return;
     }
+    if (!managerPin.trim()) {
+      setErrorMsg("Введіть PIN адміністратора для підтвердження");
+      return;
+    }
 
     setLoading(true);
     setErrorMsg(null);
     try {
-      await cancelPosOrder(order.id, reason.trim(), staffName);
+      // Перевірка PIN-коду адміністратора/керуючого для запобігання крадіжкам
+      const authRes = await authByPin(managerPin.trim());
+      const role = (authRes.staff?.role || "").toLowerCase();
+      if (!["admin", "manager"].includes(role)) {
+        setErrorMsg("Для скасування чеку потрібен PIN адміністратора або керуючого");
+        setLoading(false);
+        return;
+      }
+
+      const approverName = authRes.staff?.staff_name ? ` (погодив: ${authRes.staff.staff_name})` : "";
+      await cancelPosOrder(order.id, `${reason.trim()}${approverName}`, staffName);
       onSuccess();
     } catch (err: any) {
       setErrorMsg(err.message || "Помилка при скасуванні замовлення");
@@ -122,6 +137,26 @@ export function CancelOrderModal({
               onChange={(e) => setReason(e.target.value)}
               placeholder="Вкажіть конкретну причину скасування замовлення..."
               className="w-full bg-[#0B0D11] border border-white/10 rounded-xl p-3 text-xs sm:text-sm text-white focus:outline-none focus:border-rose-500 transition-colors resize-none"
+            />
+          </div>
+
+          {/* Manager PIN authorization */}
+          <div className="space-y-1.5 p-3.5 bg-black/40 border border-amber-500/20 rounded-2xl">
+            <div className="flex items-center justify-between">
+              <label className="text-xs font-bold text-amber-300">
+                🔐 PIN адміністратора:
+              </label>
+              <span className="text-[10px] text-zinc-500">обовʼязково для скасування</span>
+            </div>
+            <input
+              type="password"
+              inputMode="numeric"
+              pattern="[0-9]*"
+              maxLength={8}
+              value={managerPin}
+              onChange={(e) => setManagerPin(e.target.value.replace(/\D/g, ""))}
+              placeholder="••••"
+              className="w-full bg-[#0B0D11] border border-white/10 rounded-xl px-3 py-2 text-center text-lg tracking-widest text-white focus:outline-none focus:border-amber-500 transition-colors"
             />
           </div>
 

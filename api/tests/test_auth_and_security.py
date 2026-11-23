@@ -872,6 +872,7 @@ class TestSecurityVulnerabilityFixes:
     ):
         """Параметр bypass_cache вимагає дійсного підписаного токена персоналу; фейковий токен ігнорується."""
         from unittest.mock import patch
+
         from src.auth.admin_token import create_admin_token
 
         valid_tok = create_admin_token(999, test_bot_token)
@@ -899,6 +900,7 @@ class TestSecurityVulnerabilityFixes:
         """Публічний перегляд замовлення без токена блокується (403), а з коректним HMAC tracking_token дозволяється."""
         from datetime import datetime
         from unittest.mock import patch
+
         from src.auth.admin_token import create_order_tracking_token
         from src.schemas.order import OrderOut
 
@@ -939,8 +941,9 @@ class TestSecurityVulnerabilityFixes:
     def test_telegram_init_data_replay_and_future_timestamp_prevention(self, test_bot_token):
         """Telegram initData блокує час з майбутнього та застарілі підписи (24 години)."""
         import time
-        from tests.conftest import build_test_init_data
+
         from src.auth.telegram_init_data import validate_init_data
+        from tests.conftest import build_test_init_data
 
         now = int(time.time())
 
@@ -989,6 +992,7 @@ class TestSecurityVulnerabilityFixes:
     async def test_cached_static_files_security_headers(self, async_client):
         """Статичні файли в /api/uploads віддаються із заголовками безпеки nosniff та sandbox CSP."""
         from pathlib import Path
+
         from src.main import _uploads_dir
 
         path = Path(_uploads_dir)

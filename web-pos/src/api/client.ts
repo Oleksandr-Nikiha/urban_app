@@ -125,6 +125,19 @@ export async function createPosOrder(payload: CreateOrderPayload) {
   return res.json();
 }
 
+export async function toggleProductAvailability(productId: number, isAvailable: boolean) {
+  const res = await fetch(`${API_BASE}/pos/products/${productId}/availability`, {
+    method: "PATCH",
+    headers: authHeaders({ "Content-Type": "application/json" }),
+    body: JSON.stringify({ is_available: isAvailable }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ detail: "Помилка оновлення стоп-листа" }));
+    throw new Error(err.detail || "Не вдалося оновити доступність страви");
+  }
+  return res.json();
+}
+
 export async function toggleItemServed(itemId: number) {
   const res = await fetch(`${API_BASE}/pos/order-items/${itemId}/toggle-served`, {
     method: "PATCH",

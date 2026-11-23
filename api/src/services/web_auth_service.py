@@ -181,7 +181,7 @@ class WebAuthService:
             if existing and existing.get("phone_code"):
                 import datetime
 
-                now = datetime.datetime.now(datetime.timezone.utc)
+                now = datetime.datetime.now(datetime.UTC)
                 exp = existing.get("phone_code_expires_at")
                 if exp and exp < now:
                     raise HTTPException(status_code=401, detail="Код підтвердження прострочений")
@@ -278,18 +278,21 @@ class WebAuthService:
             except Exception:
                 norm_phone = phone.strip()
 
-        if telegram_id and current_user.get("telegram_id") != telegram_id:
-            if not is_staff_or_admin:
-                raise HTTPException(
-                    status_code=403,
-                    detail="Доступ до профілю іншого користувача заборонено",
-                )
-        if norm_phone and current_user.get("phone") != norm_phone and current_user.get("phone") != (phone.strip() if phone else None):
-            if not is_staff_or_admin:
-                raise HTTPException(
-                    status_code=403,
-                    detail="Доступ до профілю іншого користувача заборонено",
-                )
+        if telegram_id and current_user.get("telegram_id") != telegram_id and not is_staff_or_admin:
+            raise HTTPException(
+                status_code=403,
+                detail="Доступ до профілю іншого користувача заборонено",
+            )
+        if (
+            norm_phone
+            and current_user.get("phone") != norm_phone
+            and current_user.get("phone") != (phone.strip() if phone else None)
+            and not is_staff_or_admin
+        ):
+            raise HTTPException(
+                status_code=403,
+                detail="Доступ до профілю іншого користувача заборонено",
+            )
 
         target_user = current_user
         if is_staff_or_admin and (telegram_id or norm_phone):

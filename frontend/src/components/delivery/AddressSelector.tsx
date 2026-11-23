@@ -122,6 +122,50 @@ export function AddressSelector({
   const [house, setHouse] = useState("");
   const [floor, setFloor] = useState("");
   const [apartment, setApartment] = useState("");
+  const [gpsLoading, setGpsLoading] = useState(false);
+
+  const handleGpsDetect = () => {
+    if (!navigator.geolocation) {
+      return;
+    }
+    haptic("light");
+    setGpsLoading(true);
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        try {
+          const { latitude, longitude } = pos.coords;
+          const res = await fetch(
+            `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&accept-language=uk`
+          );
+          if (res.ok) {
+            const data = await res.json();
+            const road = data.address?.road || data.address?.street || "";
+            const houseNum = data.address?.house_number || "";
+            if (road) {
+              setStreetQuery(road);
+              const matched = addresses.find((a) => a.street.toLowerCase().includes(road.toLowerCase()));
+              if (matched) {
+                setSelectedStreet(matched.street);
+              } else {
+                setSelectedStreet(road);
+              }
+            }
+            if (houseNum) {
+              setHouse(houseNum);
+            }
+          }
+        } catch {
+          // fallback
+        } finally {
+          setGpsLoading(false);
+        }
+      },
+      () => {
+        setGpsLoading(false);
+      },
+      { timeout: 7000, enableHighAccuracy: true }
+    );
+  };
 
   const initializedRef = useRef(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -229,9 +273,20 @@ export function AddressSelector({
 
       {/* 2. Вулиця з довідника (пошук + селектор) */}
       <div className="relative" ref={dropdownRef}>
-        <label className="mb-1 block text-xs font-semibold uppercase tracking-wider opacity-60">
-          Вулиця (із довідника) {required && "*"}
-        </label>
+        <div className="mb-1 flex items-center justify-between">
+          <label className="block text-xs font-semibold uppercase tracking-wider opacity-60">
+            Вулиця (із довідника) {required && "*"}
+          </label>
+          <button
+            type="button"
+            onClick={handleGpsDetect}
+            disabled={gpsLoading || disabled}
+            className="flex items-center gap-1 text-[11px] font-semibold text-blue-500 hover:text-blue-600 disabled:opacity-50 cursor-pointer transition-opacity"
+          >
+            <span>{gpsLoading ? "⏳" : "📍"}</span>
+            <span>{gpsLoading ? "Визначаємо..." : "Визначити GPS"}</span>
+          </button>
+        </div>
         <div className="relative flex items-center">
           <input
             type="text"
