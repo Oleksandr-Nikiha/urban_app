@@ -21,6 +21,8 @@ class PhoneLoginIn(BaseModel):
     first_name: str | None = None
     last_name: str | None = None
     telegram_id: int | None = None
+    password: str | None = None
+    code: str | None = None
 
 
 class WebProfileUpdateIn(BaseModel):
@@ -31,7 +33,7 @@ class WebProfileUpdateIn(BaseModel):
     full_name: str | None = None
     delivery_address: str | None = None
     additional_address: str | None = None
-    bonus_balance: int | None = None
+    bonus_balance: int | None = None  # Застаріле поле: ігнорується сервером задля безпеки балансу
 
 
 class AuthSessionOut(BaseModel):

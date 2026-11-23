@@ -98,7 +98,7 @@ services:
       # Тільки локально: назовні Mini App віддає caddy зі зібраної статики
       # (scripts/deploy_frontend.sh). Dev-сервер публікувати не можна — він
       # віддає вихідні тексти з підставленими значеннями VITE_*-змінних.
-      - "5173:5173"
+      - "127.0.0.1:5173:5173"
     volumes:
       # node_modules навмисно НЕ ховаємо в анонімний том: інакше на хості його
       # немає, і VS Code не бачить типів — ні автодоповнення, ні помилок.
@@ -126,7 +126,7 @@ services:
       VITE_API_BASE_URL: ${VITE_API_BASE_URL:-/urban-bites/api}
       VITE_TELEGRAM_BOT_USERNAME: ${BOT_USERNAME:-urban_bites_tst_bot}
     ports:
-      - "5174:5174"
+      - "127.0.0.1:5174:5174"
     volumes:
       - ./web-croissants:/app
     command: sh -c "[ -d node_modules/vite ] || npm install; npm run dev -- --host 0.0.0.0"
@@ -150,7 +150,7 @@ services:
       VITE_API_BASE_URL: ${VITE_API_BASE_URL:-/urban-bites/api}
       VITE_TELEGRAM_BOT_USERNAME: ${BOT_USERNAME:-urban_bites_tst_bot}
     ports:
-      - "5175:5175"
+      - "127.0.0.1:5175:5175"
     volumes:
       - ./web-pizza:/app
     command: sh -c "[ -d node_modules/vite ] || npm install; npm run dev -- --host 0.0.0.0"
@@ -174,7 +174,7 @@ services:
       VITE_API_BASE_URL: ${VITE_API_BASE_URL:-/urban-bites/api}
       VITE_TELEGRAM_BOT_USERNAME: ${BOT_USERNAME:-urban_bites_tst_bot}
     ports:
-      - "5176:5176"
+      - "127.0.0.1:5176:5176"
     volumes:
       - ./web-group:/app
     command: sh -c "[ -d node_modules/vite ] || npm install; npm run dev -- --host 0.0.0.0"
@@ -197,7 +197,7 @@ services:
     environment:
       VITE_API_BASE_URL: ${VITE_API_BASE_URL:-/urban-bites/api}
     ports:
-      - "5177:5177"
+      - "127.0.0.1:5177:5177"
     volumes:
       - ./web-pos:/app
     command: sh -c "[ -d node_modules/vite ] || npm install; npm run dev -- --host 0.0.0.0"
@@ -221,7 +221,7 @@ services:
       VITE_API_BASE_URL: ${VITE_API_BASE_URL:-/urban-bites/api}
       VITE_TELEGRAM_BOT_USERNAME: ${BOT_USERNAME:-urban_bites_tst_bot}
     ports:
-      - "5178:5178"
+      - "127.0.0.1:5178:5178"
     volumes:
       - ./web-admin:/app
     command: sh -c "[ -d node_modules/vite ] || npm install; npm run dev -- --host 0.0.0.0"

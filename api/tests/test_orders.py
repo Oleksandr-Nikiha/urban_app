@@ -519,8 +519,23 @@ class TestOrderHistoryAndDetailsApi:
         assert data["source"] == "web_croissants"
         assert data["groups"][0]["location_name"] == "Doma Croissants"
 
-    async def test_get_web_orders_history_batch(self, async_client, mock_db_conn):
-        """Тестування отримання історії веб-замовлень без N+1 проблеми."""
+    async def test_get_web_orders_history_batch(
+        self, async_client, mock_db_conn, valid_admin_token
+    ):
+        """Тестування отримання історії веб-замовлень без N+1 проблеми (з авторизацією)."""
+        # Без авторизації -> 401
+        res_unauth = await async_client.get("/api/orders/web/history?phone=%2B380931234567")
+        assert res_unauth.status_code == 401
+
+        mock_db_conn.fetchrow.return_value = {
+            "id": 99,
+            "telegram_id": 999999999,
+            "role": "admin",
+            "phone": "+380931234567",
+            "full_name": "Адміністратор",
+            "is_active": True,
+        }
+
         mock_db_conn.fetch.side_effect = [
             # 1. orders
             [
@@ -568,7 +583,10 @@ class TestOrderHistoryAndDetailsApi:
             [],
         ]
 
-        response = await async_client.get("/api/orders/web/history?phone=%2B380931234567")
+        response = await async_client.get(
+            "/api/orders/web/history?phone=%2B380931234567",
+            headers={"X-Admin-Token": valid_admin_token},
+        )
         assert response.status_code == 200
         data = response.json()
         assert len(data) == 1

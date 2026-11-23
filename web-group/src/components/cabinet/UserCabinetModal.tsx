@@ -144,6 +144,7 @@ export function UserCabinetModal({
                   additional_address: prev.additional_address || serverUser.additional_address || "",
                   client_code: serverUser.client_code || prev.client_code,
                   bonuses: serverUser.bonus_balance ?? prev.bonuses ?? 50,
+                  auth_token: serverUser.auth_token || prev.auth_token,
                 };
                 saveSharedProfile(merged);
                 if (onProfileUpdated) onProfileUpdated(merged);
@@ -260,6 +261,7 @@ export function UserCabinetModal({
         client_code: serverUser.client_code || `UB-${tgUser.id}`,
         is_phone_verified: true,
         isAuthenticated: true,
+        auth_token: serverUser.auth_token || profile.auth_token,
       };
 
       if (serverUser.delivery_address && !profile.street) {

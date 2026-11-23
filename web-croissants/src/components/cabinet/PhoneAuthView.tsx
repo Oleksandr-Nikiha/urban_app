@@ -59,6 +59,7 @@ export function PhoneAuthView({
         client_code: userOut.client_code || `UB-${userOut.id}`,
         is_phone_verified: true,
         isAuthenticated: true,
+        auth_token: userOut.auth_token,
       };
 
       saveSharedProfile(updated);

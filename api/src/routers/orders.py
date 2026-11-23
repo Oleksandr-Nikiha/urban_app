@@ -5,7 +5,7 @@ from typing import Any
 import asyncpg
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, status
 
-from src.auth.deps import get_current_user
+from src.auth.deps import get_current_user, get_optional_current_user
 from src.config import get_settings
 from src.db.connection import get_pool
 from src.middleware.rate_limiter import rate_limiter
@@ -72,17 +72,20 @@ async def _fetch_order_by_id(
 async def create_web_order(
     payload: WebOrderCreateIn,
     background_tasks: BackgroundTasks,
+    current_user: asyncpg.Record | None = Depends(get_optional_current_user),
     pool: asyncpg.Pool = Depends(get_pool),
 ):
     """
-    Створює нове замовлення безпосередньо з публічного веб-сайту закладу.
-    Не вимагає авторизації Telegram від клієнта.
+    Створює нове замовлення безпосередньо з веб-сайту закладу.
+    Підтримує анонімне замовлення, а для використання бонусів вимагає авторизацію.
     Сповіщення персоналу надсилається в Telegram-чат із позначкою сайту.
     """
     settings = get_settings()
 
     async with pool.acquire() as conn:
-        order, customer_tg_id, notif_data = await OrderService.create_web_order(conn, payload)
+        order, customer_tg_id, notif_data = await OrderService.create_web_order(
+            conn, payload, authenticated_user=current_user
+        )
 
     background_tasks.add_task(send_order_to_manager, order.id, notif_data, settings)
     if customer_tg_id:
@@ -102,15 +105,54 @@ async def get_web_orders_history(
     phone: str | None = Query(None, description="Номер телефону клієнта"),
     telegram_id: int | None = Query(None, description="Telegram ID клієнта"),
     limit: int = Query(25, ge=1, le=50),
+    current_user: asyncpg.Record | None = Depends(get_optional_current_user),
     pool: asyncpg.Pool = Depends(get_pool),
 ):
     """
-    Отримує історію замовлень для публічного сайту за номером телефону або telegram_id.
+    Отримує історію замовлень для сайту.
+    Вимагає авторизацію користувача або персонал для захисту історії від несанкціонованого доступу.
     """
+    if not current_user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Для перегляду історії замовлень потрібна авторизація",
+        )
+
+    is_staff = (
+        current_user.get("role") in ("admin", "manager", "cashier", "waiter")
+        or "manager_id" in current_user
+    )
+
+    clean_phone = phone.strip() if phone else None
+    if not is_staff:
+        user_phone = current_user.get("phone")
+        user_tg = current_user.get("telegram_id")
+        if telegram_id and user_tg and telegram_id != user_tg:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Доступ до історії замовлень іншого користувача заборонено",
+            )
+        if clean_phone and user_phone:
+            from src.schemas.user import normalize_phone
+
+            try:
+                p1 = normalize_phone(clean_phone)
+                p2 = normalize_phone(user_phone)
+            except Exception:
+                p1 = clean_phone
+                p2 = user_phone
+            if p1 != p2 and not (user_tg and telegram_id == user_tg):
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="Доступ до історії замовлень іншого користувача заборонено",
+                )
+        clean_phone = clean_phone or user_phone
+        telegram_id = telegram_id or user_tg
+
     async with pool.acquire() as conn:
         return await OrderService.fetch_web_orders_history(
             conn=conn,
-            phone=phone,
+            phone=clean_phone,
             telegram_id=telegram_id,
             limit=limit,
         )
@@ -119,15 +161,54 @@ async def get_web_orders_history(
 @router.get("/web/{order_id}", response_model=OrderOut)
 async def get_web_order_by_id(
     order_id: int,
+    token: str | None = Query(None, description="Токен безпечного відстеження замовлення"),
+    current_user: asyncpg.Record | None = Depends(get_optional_current_user),
+    settings=Depends(get_settings),
     pool: asyncpg.Pool = Depends(get_pool),
 ):
     """
-    Отримує публічний статус замовлення за його ID (для відстеження на сайті).
+    Отримує статус замовлення за його ID.
+    Захищає конфіденційні дані (IDOR) перевіркою tracking_token або автентифікації власника.
     """
     async with pool.acquire() as conn:
         order = await OrderService.fetch_order_by_id(conn, order_id)
         if not order:
             raise HTTPException(status_code=404, detail="Замовлення не знайдено")
+
+        from src.auth.admin_token import (
+            create_order_tracking_token,
+            verify_order_tracking_token,
+        )
+        from src.auth.deps import _get_fallback_tokens
+
+        # 1. Перевірка підписаного токена відстеження
+        is_token_valid = False
+        if token:
+            fallback = _get_fallback_tokens(settings)
+            is_token_valid = verify_order_tracking_token(
+                order_id, token, settings.bot_token, fallback
+            )
+
+        # 2. Перевірка авторизованого сеансу (власник або персонал)
+        is_owner_or_staff = False
+        if current_user:
+            is_staff = (
+                current_user.get("role") in ("admin", "manager", "cashier", "waiter")
+                or "manager_id" in current_user
+            )
+            is_owner = (
+                (current_user.get("telegram_id") and current_user.get("telegram_id") == order.telegram_id)
+                or (current_user.get("phone") and current_user.get("phone") == order.contact_phone)
+            )
+            is_owner_or_staff = is_staff or is_owner
+
+        if not (is_token_valid or is_owner_or_staff):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Доступ до деталей замовлення заборонено. Потрібна авторизація або дійсний токен відстеження.",
+            )
+
+        order.tracking_token = create_order_tracking_token(order.id, settings.bot_token)
         return order
 
 

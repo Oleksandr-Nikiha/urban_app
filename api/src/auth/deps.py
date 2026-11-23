@@ -125,12 +125,51 @@ async def get_current_user(
     fallback_tokens = _get_fallback_tokens(settings)
 
     # Підтримка Authorization: Bearer <token>
+    staff_token_raw = None
     if isinstance(bearer_raw, str) and bearer_raw.startswith("Bearer "):
         bearer_token = bearer_raw[7:].strip()
         if bearer_token.startswith("u1."):
             user_token_raw = bearer_token
         elif bearer_token.startswith("v1."):
             admin_token_raw = bearer_token
+        elif bearer_token.startswith("s1."):
+            staff_token_raw = bearer_token
+    elif isinstance(admin_token_raw, str) and admin_token_raw.startswith("s1."):
+        staff_token_raw = admin_token_raw
+
+    # 0. Токен співробітника POS (s1.staff_id...)
+    if isinstance(staff_token_raw, str):
+        from src.auth.admin_token import verify_staff_token
+
+        staff_id = verify_staff_token(
+            staff_token_raw, settings.bot_token, fallback_tokens
+        )
+        if staff_id:
+            async with pool.acquire() as conn:
+                staff_row = await conn.fetchrow(
+                    """
+                    SELECT m.id AS manager_id, m.id, m.telegram_id, m.role, m.location_id, m.is_active,
+                           COALESCE(m.staff_name, u.first_name, 'Співробітник') AS staff_name,
+                           l.name AS location_name,
+                           COALESCE(u.full_name, m.staff_name, 'Співробітник') AS full_name,
+                           u.phone
+                    FROM managers m
+                    LEFT JOIN users u ON u.telegram_id = m.telegram_id
+                    LEFT JOIN locations l ON l.id = m.location_id
+                    WHERE m.id = $1 AND m.is_active = true
+                    """,
+                    staff_id,
+                )
+            if staff_row:
+                return staff_row
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Обліковий запис співробітника деактивовано або не знайдено",
+            )
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Недійсний або прострочений токен персоналу",
+        )
 
     # 1. Токен користувача веб-додатку (u1.user_id...)
     if isinstance(user_token_raw, str):
@@ -198,6 +237,33 @@ async def get_current_user(
     return user_row
 
 
+async def get_optional_current_user(
+    init_data_raw: str | None = Depends(init_data_header),
+    admin_token_raw: str | None = Depends(admin_token_header),
+    user_token_raw: str | None = Depends(user_token_header),
+    bearer_raw: str | None = Depends(auth_header),
+    settings=Depends(get_settings),
+    pool: asyncpg.Pool = Depends(get_pool),
+) -> asyncpg.Record | None:
+    """
+    Повертає поточного користувача, якщо надано валідний заголовок авторизації,
+    або None для анонімних запитів.
+    """
+    if not (init_data_raw or admin_token_raw or user_token_raw or bearer_raw):
+        return None
+    try:
+        return await get_current_user(
+            init_data_raw=init_data_raw,
+            admin_token_raw=admin_token_raw,
+            user_token_raw=user_token_raw,
+            bearer_raw=bearer_raw,
+            settings=settings,
+            pool=pool,
+        )
+    except HTTPException:
+        return None
+
+
 async def get_current_staff(
     user: asyncpg.Record = Depends(get_current_user),
     pool: asyncpg.Pool = Depends(get_pool),
@@ -206,11 +272,18 @@ async def get_current_staff(
     Перевіряє, чи є користувач активним менеджером або адміністратором.
     Повертає запис зі штату з полями role, location_id, is_active тощо.
     """
+    # Якщо user вже містить запис менеджера (з s1 staff token):
+    if "manager_id" in user or ("role" in user and "is_active" in user and user.get("is_active")):
+        return user
+
     async with pool.acquire() as conn:
         staff_row = await conn.fetchrow(
             """
             SELECT m.id, m.telegram_id, m.role, m.location_id, m.is_active,
-                   l.name AS location_name, u.full_name, u.phone
+                   COALESCE(m.staff_name, u.first_name, 'Співробітник') AS staff_name,
+                   l.name AS location_name,
+                   COALESCE(u.full_name, m.staff_name, 'Співробітник') AS full_name,
+                   u.phone
             FROM managers m
             JOIN users u ON u.telegram_id = m.telegram_id
             LEFT JOIN locations l ON l.id = m.location_id

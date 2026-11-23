@@ -117,6 +117,7 @@ class OrderOut(BaseModel):
     bonus_earned: int = 0
     created_at: datetime
     source: str = "telegram"
+    tracking_token: str | None = None
     groups: list[OrderGroupOut] = []
 
 

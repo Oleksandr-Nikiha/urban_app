@@ -146,6 +146,7 @@ export function App() {
                   additional_address: prev?.additional_address || serverUser.additional_address || "",
                   client_code: serverUser.client_code || prev?.client_code,
                   bonuses: serverUser.bonus_balance ?? prev?.bonuses ?? 50,
+                  auth_token: serverUser.auth_token || prev?.auth_token || savedUser.auth_token,
                 };
                 saveSharedProfile(synced);
                 if (synced.name) setUserName(synced.name);

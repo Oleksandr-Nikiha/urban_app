@@ -10,7 +10,7 @@ def validate_init_data(
     init_data: str,
     bot_token: str,
     fallback_tokens: list[str] | None = None,
-    max_age_seconds: int = 86400 * 30,
+    max_age_seconds: int = 86400,
 ) -> dict:
     """
     Перевіряє підпис initData від Telegram.
@@ -63,8 +63,8 @@ def validate_init_data(
         raise ValueError("Параметр 'auth_date' має бути цілим числом") from None
 
     current_time = time.time()
-    if current_time - auth_date > max_age_seconds:
-        raise ValueError(f"Дані застаріли (вік перевищує {max_age_seconds} секунд)")
+    if (current_time - auth_date > max_age_seconds) or (auth_date - current_time > 300):
+        raise ValueError(f"Дані застаріли або недійсний час авторизації (допустиме вікно: {max_age_seconds} сек)")
 
     result = parsed_data.copy()
     for json_field in ("user", "receiver", "chat"):

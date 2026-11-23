@@ -1,4 +1,5 @@
 const API_BASE = "/urban-bites/api";
+import { getAuthHeaders } from "../types/user.ts";
 import type { DeliveryAddress } from "../types/catalog.ts";
 import type { OrderOut } from "../types/order.ts";
 
@@ -35,7 +36,11 @@ export async function fetchWebOrdersHistory(
       query = parts.join("&");
     }
 
-    const res = await fetch(`${API_BASE}/orders/web/history?${query}`);
+    const res = await fetch(`${API_BASE}/orders/web/history?${query}`, {
+      headers: {
+        ...getAuthHeaders(),
+      },
+    });
     if (!res.ok) return [];
     return res.json();
   } catch {
@@ -66,6 +71,7 @@ export interface UserOut {
   bonus_balance: number;
   client_code: string;
   bot_username?: string;
+  auth_token?: string | null;
 }
 
 export async function authTelegramWidget(user: TelegramWidgetUser): Promise<UserOut> {
@@ -104,7 +110,11 @@ export async function fetchWebProfile(params: {
   if (parts.length === 0) return null;
 
   try {
-    const res = await fetch(`${API_BASE}/auth/web-profile?${parts.join("&")}`);
+    const res = await fetch(`${API_BASE}/auth/web-profile?${parts.join("&")}`, {
+      headers: {
+        ...getAuthHeaders(),
+      },
+    });
     if (!res.ok) return null;
     return res.json();
   } catch {
@@ -116,6 +126,7 @@ export async function updateWebProfile(payload: WebProfileUpdatePayload): Promis
   const res = await fetch(`${API_BASE}/auth/web-profile`, {
     method: "POST",
     headers: {
+      ...getAuthHeaders(),
       "Content-Type": "application/json",
     },
     body: JSON.stringify(payload),

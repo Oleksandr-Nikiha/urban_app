@@ -8,6 +8,7 @@ import {
   fetchPosOrders,
   fetchStaffList,
   lookupCustomer,
+  setPosAuthToken,
   updateOrderStatus,
 } from "./api/client";
 import { ActiveOrdersView } from "./components/ActiveOrdersView";
@@ -149,8 +150,9 @@ export function App() {
       .catch((err) => console.error("Error loading orders:", err));
   };
 
-  // 2. Load menu, shift & orders on location change
+  // 2. Load menu, shift & orders on location change or unlock
   useEffect(() => {
+    if (isLocked) return;
     setLoadingMenu(true);
     fetchMenu(locationId)
       .then((data) => {
@@ -163,16 +165,17 @@ export function App() {
     isFirstLoadRef.current = true;
     loadOrders(true);
     loadShift();
-  }, [locationId]);
+  }, [locationId, isLocked]);
 
   // 3. Periodic silent auto-refresh (every 10s)
   useEffect(() => {
+    if (isLocked) return;
     const interval = setInterval(() => {
       loadOrders(false);
       loadShift();
     }, 10000);
     return () => clearInterval(interval);
-  }, [locationId, soundEnabled]);
+  }, [locationId, soundEnabled, isLocked]);
 
   // Filtered products
   const displayedProducts = useMemo(() => {
@@ -204,7 +207,8 @@ export function App() {
   }, [categories, selectedCategoryId, searchQuery]);
 
   // Handle staff login
-  const handlePinSuccess = (staff: StaffMember) => {
+  const handlePinSuccess = (staff: StaffMember, token: string) => {
+    setPosAuthToken(token);
     setCurrentStaff(staff);
     if (staff.location_id) {
       setLocationId(staff.location_id);

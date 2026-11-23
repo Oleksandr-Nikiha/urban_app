@@ -15,6 +15,7 @@ export interface UserProfile {
   client_code?: string;
   bonuses: number;
   isAuthenticated?: boolean;
+  auth_token?: string | null;
 }
 
 // --- Синхронізовані контракти API (api/src/schemas/user.py, auth.py, bonus.py) ---
@@ -131,6 +132,7 @@ export function saveSharedProfile(profile: UserProfile): void {
     localStorage.setItem(USER_PROFILE_STORAGE_KEY, JSON.stringify(profile));
     if (profile.phone) setSharedCookie("urban_auth_phone", profile.phone);
     if (profile.telegram_id) setSharedCookie("urban_auth_tg", String(profile.telegram_id));
+    if (profile.auth_token) setSharedCookie("urban_auth_token", profile.auth_token);
   } catch {}
 }
 
@@ -140,5 +142,26 @@ export function clearSharedProfile(): void {
     localStorage.removeItem(LEGACY_PROFILE_STORAGE_KEY);
     deleteSharedCookie("urban_auth_phone");
     deleteSharedCookie("urban_auth_tg");
+    deleteSharedCookie("urban_auth_token");
   } catch {}
+}
+
+export function getAuthToken(): string | null {
+  try {
+    const raw =
+      localStorage.getItem(USER_PROFILE_STORAGE_KEY) ||
+      localStorage.getItem(LEGACY_PROFILE_STORAGE_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (parsed && typeof parsed === "object" && parsed.auth_token) {
+        return parsed.auth_token;
+      }
+    }
+  } catch {}
+  return getSharedCookie("urban_auth_token");
+}
+
+export function getAuthHeaders(): Record<string, string> {
+  const token = getAuthToken();
+  return token ? { Authorization: `Bearer ${token}` } : {};
 }

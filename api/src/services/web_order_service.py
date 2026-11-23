@@ -18,6 +18,7 @@ from src.services.order_validation import validate_scheduled_time
 async def create_web_order(
     conn: asyncpg.Connection,
     payload: WebOrderCreateIn,
+    authenticated_user: asyncpg.Record | None = None,
 ) -> tuple[OrderOut, int | None, dict[str, Any]]:
     """
     Створює замовлення з веб-сайту закладу:
@@ -249,12 +250,23 @@ async def create_web_order(
             )
 
         actual_bonus_spent = 0
-        if payload.bonus_spent > 0 and user_row:
+        if payload.bonus_spent > 0:
+            if not user_row:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail="Користувача для списання бонусів не знайдено",
+                )
+            if not authenticated_user or authenticated_user["id"] != user_row["id"]:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="Списання бонусів дозволено лише для авторизованого власника акаунта.",
+                )
+            bonus_to_spend = min(payload.bonus_spent, int(total_order_price))
             actual_bonus_spent = await BonusService.spend_bonuses(
                 conn=conn,
                 user_id=user_row["id"],
-                order_id=0, # updated after insert
-                bonus_to_spend=payload.bonus_spent,
+                order_id=0,  # оновлюється після створення замовлення
+                bonus_to_spend=bonus_to_spend,
             )
 
         order_row = await conn.fetchrow(
@@ -377,6 +389,16 @@ async def create_web_order(
         "telegram_id": customer_tg_id,
     }
 
+    from src.auth.admin_token import create_order_tracking_token
+    from src.config import get_settings
+
+    settings = get_settings()
+    tracking_tok = (
+        create_order_tracking_token(order_id, settings.bot_token)
+        if settings.bot_token
+        else None
+    )
+
     order_out = OrderOut(
         id=order_id,
         telegram_id=customer_tg_id,
@@ -393,6 +415,7 @@ async def create_web_order(
         bonus_earned=0,
         created_at=created_at,
         source=payload.source,
+        tracking_token=tracking_tok,
         groups=[
             OrderGroupOut(
                 id=order_group_id,

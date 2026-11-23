@@ -1,4 +1,5 @@
 const API_BASE = "/urban-bites/api";
+import { getAuthHeaders } from "../types/user.ts";
 import type {
   Category,
   DeliveryAddress,
@@ -53,10 +54,25 @@ export async function fetchDeliveryAddresses(city: string = "Київ"): Promise
   return res.json();
 }
 
+export function saveOrderTrackingToken(orderId: number, token: string): void {
+  try {
+    localStorage.setItem(`urban_order_token_${orderId}`, token);
+  } catch {}
+}
+
+export function getOrderTrackingToken(orderId: number): string | null {
+  try {
+    return localStorage.getItem(`urban_order_token_${orderId}`);
+  } catch {
+    return null;
+  }
+}
+
 export async function submitWebOrder(payload: WebOrderCreatePayload): Promise<OrderOut> {
   const res = await fetch(`${API_BASE}/orders/web`, {
     method: "POST",
     headers: {
+      ...getAuthHeaders(),
       "Content-Type": "application/json",
     },
     body: JSON.stringify(payload),
@@ -67,13 +83,30 @@ export async function submitWebOrder(payload: WebOrderCreatePayload): Promise<Or
     throw new Error(errorData.detail || "Не вдалося оформити замовлення");
   }
 
-  return res.json();
+  const data: OrderOut = await res.json();
+  if (data.tracking_token) {
+    saveOrderTrackingToken(data.id, data.tracking_token);
+  }
+  return data;
 }
 
-export async function fetchWebOrder(orderId: number): Promise<OrderOut> {
-  const res = await fetch(`${API_BASE}/orders/web/${orderId}`);
-  if (!res.ok) throw new Error("Замовлення не знайдено");
-  return res.json();
+export async function fetchWebOrder(orderId: number, token?: string): Promise<OrderOut> {
+  const tok = token || getOrderTrackingToken(orderId);
+  const url = tok
+    ? `${API_BASE}/orders/web/${orderId}?token=${encodeURIComponent(tok)}`
+    : `${API_BASE}/orders/web/${orderId}`;
+
+  const res = await fetch(url, {
+    headers: {
+      ...getAuthHeaders(),
+    },
+  });
+  if (!res.ok) throw new Error("Замовлення не знайдено або доступ обмежено");
+  const data: OrderOut = await res.json();
+  if (data.tracking_token) {
+    saveOrderTrackingToken(orderId, data.tracking_token);
+  }
+  return data;
 }
 
 export async function fetchWebOrdersHistory(
@@ -92,7 +125,11 @@ export async function fetchWebOrdersHistory(
       query = parts.join("&");
     }
 
-    const res = await fetch(`${API_BASE}/orders/web/history?${query}`);
+    const res = await fetch(`${API_BASE}/orders/web/history?${query}`, {
+      headers: {
+        ...getAuthHeaders(),
+      },
+    });
     if (!res.ok) return [];
     return res.json();
   } catch {
@@ -123,6 +160,7 @@ export interface UserOut {
   bonus_balance: number;
   client_code: string;
   bot_username?: string;
+  auth_token?: string | null;
 }
 
 export async function authTelegramWidget(user: TelegramWidgetUser): Promise<UserOut> {
@@ -159,7 +197,11 @@ export async function fetchWebProfile(params: {
   if (parts.length === 0) return null;
 
   try {
-    const res = await fetch(`${API_BASE}/auth/web-profile?${parts.join("&")}`);
+    const res = await fetch(`${API_BASE}/auth/web-profile?${parts.join("&")}`, {
+      headers: {
+        ...getAuthHeaders(),
+      },
+    });
     if (!res.ok) return null;
     return res.json();
   } catch {
@@ -171,6 +213,7 @@ export async function updateWebProfile(payload: WebProfileUpdatePayload): Promis
   const res = await fetch(`${API_BASE}/auth/web-profile`, {
     method: "POST",
     headers: {
+      ...getAuthHeaders(),
       "Content-Type": "application/json",
     },
     body: JSON.stringify(payload),

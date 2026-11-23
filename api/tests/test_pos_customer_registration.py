@@ -105,7 +105,19 @@ class TestPosCustomerRegisterEndpoint:
 
     @pytest.mark.asyncio
     async def test_register_new_customer_endpoint(self, async_client, mock_db_conn):
+        staff_mock = {
+            "id": 1,
+            "telegram_id": 123456789,
+            "role": "waiter",
+            "location_id": 1,
+            "is_active": True,
+            "staff_name": "Офіціант",
+            "location_name": "Pizza",
+            "full_name": "Тестовий Юзер",
+            "phone": "+380931112233",
+        }
         mock_db_conn.fetchrow.side_effect = [
+            staff_mock,  # get_current_staff check
             None,  # find existing
             {
                 "id": 99,

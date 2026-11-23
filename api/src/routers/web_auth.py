@@ -3,6 +3,7 @@ import logging
 import asyncpg
 from fastapi import APIRouter, Depends
 
+from src.auth.deps import get_current_user
 from src.config import get_settings
 from src.db.connection import get_pool
 from src.middleware.rate_limiter import rate_limiter
@@ -68,16 +69,18 @@ async def auth_phone_login(
 async def get_web_profile(
     telegram_id: int | None = None,
     phone: str | None = None,
+    user: asyncpg.Record = Depends(get_current_user),
     pool: asyncpg.Pool = Depends(get_pool),
     settings=Depends(get_settings),
 ):
     """
-    Отримання актуальних даних профілю з бази даних за telegram_id або номером телефону.
-    Використовується веб-клієнтом для синхронізації верифікації, імені та збережених адрес.
+    Отримання актуальних даних профілю з бази даних для авторизованого клієнта.
+    Захищає конфіденційні дані (адреси, ПІБ, бонуси) від несанкціонованого парсингу.
     """
     async with pool.acquire() as conn:
         return await WebAuthService.get_web_profile(
             conn=conn,
+            current_user=user,
             telegram_id=telegram_id,
             phone=phone,
             bot_token=settings.bot_token,
@@ -87,17 +90,18 @@ async def get_web_profile(
 @router.post("/web-profile", response_model=UserOut)
 async def update_web_profile(
     payload: WebProfileUpdateIn,
+    user: asyncpg.Record = Depends(get_current_user),
     pool: asyncpg.Pool = Depends(get_pool),
     settings=Depends(get_settings),
 ):
     """
-    Оновлення контактних даних користувача з публічного веб-сайту.
-    Синхронізує телефон, ім'я та адресу з таблицею users для вказаного telegram_id або телефону,
-    автоматично підтверджуючи номер, якщо користувач авторизований через Telegram.
+    Оновлення контактних даних поточного авторизованого користувача.
+    Синхронізує телефон, ім'я та адресу виключно для поточного сеансу.
     """
     async with pool.acquire() as conn:
         return await WebAuthService.update_web_profile(
             conn=conn,
+            current_user=user,
             payload=payload,
             bot_token=settings.bot_token,
         )
@@ -108,12 +112,14 @@ async def get_web_user_bonus_history(
     phone: str | None = None,
     telegram_id: int | None = None,
     limit: int = 50,
+    user: asyncpg.Record = Depends(get_current_user),
     pool: asyncpg.Pool = Depends(get_pool),
 ):
-    """Повертає публічну історію нарахувань та списань бонусів за телефоном або telegram_id."""
+    """Повертає історію нарахувань та списань бонусів для авторизованого користувача."""
     async with pool.acquire() as conn:
         return await WebAuthService.get_bonus_history(
             conn=conn,
+            current_user=user,
             phone=phone,
             telegram_id=telegram_id,
             limit=limit,

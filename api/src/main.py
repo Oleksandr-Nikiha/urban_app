@@ -8,6 +8,8 @@ from pathlib import Path
 import asyncpg
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.openapi.docs import get_redoc_html, get_swagger_ui_html
+from fastapi.responses import JSONResponse
 from starlette.staticfiles import StaticFiles
 
 from src.config import get_settings
@@ -108,7 +110,42 @@ async def lifespan(app: FastAPI):
     await disconnect_db()
 
 
-app = FastAPI(title="Urban Bites API", lifespan=lifespan)
+app = FastAPI(
+    title="Urban Bites API",
+    docs_url=None,
+    redoc_url=None,
+    openapi_url="/api/openapi.json",
+    servers=[
+        {"url": "/urban-bites", "description": "Reverse Proxy (/urban-bites)"},
+        {"url": "", "description": "Direct / Local"},
+    ],
+    lifespan=lifespan,
+)
+
+
+@app.get("/api/docs", include_in_schema=False)
+@app.get("/docs", include_in_schema=False)
+async def swagger_ui_html():
+    return get_swagger_ui_html(
+        openapi_url="openapi.json",
+        title=f"{app.title} - Swagger UI",
+        swagger_favicon_url="https://fastapi.tiangolo.com/img/favicon.png",
+    )
+
+
+@app.get("/api/redoc", include_in_schema=False)
+@app.get("/redoc", include_in_schema=False)
+async def redoc_html():
+    return get_redoc_html(
+        openapi_url="openapi.json",
+        title=f"{app.title} - ReDoc",
+        redoc_favicon_url="https://fastapi.tiangolo.com/img/favicon.png",
+    )
+
+
+@app.get("/openapi.json", include_in_schema=False)
+async def openapi_direct():
+    return JSONResponse(app.openapi())
 
 
 # Mini App віддається з іншого origin, ніж API (у dev — Vite на :5173,
@@ -169,6 +206,8 @@ class CachedStaticFiles(StaticFiles):
         response = await super().get_response(path, scope)
         if response.status_code == 200:
             response.headers["Cache-Control"] = "public, max-age=2592000, immutable"
+            response.headers["X-Content-Type-Options"] = "nosniff"
+            response.headers["Content-Security-Policy"] = "default-src 'none'; sandbox"
         return response
 
 

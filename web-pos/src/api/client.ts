@@ -27,6 +27,33 @@ export function getImageUrl(path: string | null | undefined): string {
   return `/${path}`;
 }
 
+let currentPosToken: string | null = localStorage.getItem("pos_auth_token");
+
+export function setPosAuthToken(token: string | null) {
+  currentPosToken = token;
+  if (token) {
+    localStorage.setItem("pos_auth_token", token);
+  } else {
+    localStorage.removeItem("pos_auth_token");
+  }
+}
+
+export function getPosAuthToken(): string | null {
+  if (!currentPosToken) {
+    currentPosToken = localStorage.getItem("pos_auth_token");
+  }
+  return currentPosToken;
+}
+
+function authHeaders(extraHeaders: Record<string, string> = {}): Record<string, string> {
+  const token = getPosAuthToken();
+  const headers: Record<string, string> = { ...extraHeaders };
+  if (token) {
+    headers["Authorization"] = `Bearer ${token}`;
+  }
+  return headers;
+}
+
 export async function fetchStaffList(): Promise<StaffMember[]> {
   const res = await fetch(`${API_BASE}/pos/staff`);
   if (!res.ok) throw new Error("Не вдалося завантажити список персоналу");
@@ -46,17 +73,25 @@ export async function authByPin(
     const err = await res.json().catch(() => ({ detail: "Помилка авторизації" }));
     throw new Error(err.detail || "Невірний PIN-код");
   }
-  return res.json();
+  const data = await res.json();
+  if (data?.token) {
+    setPosAuthToken(data.token);
+  }
+  return data;
 }
 
 export async function fetchMenu(locationId: number): Promise<Category[]> {
-  const res = await fetch(`${API_BASE}/pos/menu?location_id=${locationId}`);
+  const res = await fetch(`${API_BASE}/pos/menu?location_id=${locationId}`, {
+    headers: authHeaders(),
+  });
   if (!res.ok) throw new Error("Не вдалося завантажити меню закладу");
   return res.json();
 }
 
 export async function lookupCustomer(query: string): Promise<CustomerData> {
-  const res = await fetch(`${API_BASE}/pos/customer?query=${encodeURIComponent(query)}`);
+  const res = await fetch(`${API_BASE}/pos/customer?query=${encodeURIComponent(query)}`, {
+    headers: authHeaders(),
+  });
   if (!res.ok) throw new Error("Помилка пошуку гостя");
   return res.json();
 }
@@ -67,7 +102,7 @@ export async function registerCustomer(
 ): Promise<{ success: boolean; message: string; customer: CustomerData }> {
   const res = await fetch(`${API_BASE}/pos/customer/register`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: authHeaders({ "Content-Type": "application/json" }),
     body: JSON.stringify({ phone, name: name || "Client" }),
   });
   if (!res.ok) {
@@ -80,7 +115,7 @@ export async function registerCustomer(
 export async function createPosOrder(payload: CreateOrderPayload) {
   const res = await fetch(`${API_BASE}/pos/orders`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: authHeaders({ "Content-Type": "application/json" }),
     body: JSON.stringify(payload),
   });
   if (!res.ok) {
@@ -93,6 +128,7 @@ export async function createPosOrder(payload: CreateOrderPayload) {
 export async function toggleItemServed(itemId: number) {
   const res = await fetch(`${API_BASE}/pos/order-items/${itemId}/toggle-served`, {
     method: "PATCH",
+    headers: authHeaders(),
   });
   if (!res.ok) {
     const err = await res.json().catch(() => ({ detail: "Помилка зміни статусу страви" }));
@@ -107,7 +143,7 @@ export async function addItemsToOrder(
 ) {
   const res = await fetch(`${API_BASE}/pos/orders/${orderId}/items`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: authHeaders({ "Content-Type": "application/json" }),
     body: JSON.stringify({ items }),
   });
   if (!res.ok) {
@@ -123,7 +159,7 @@ export async function closeTableOrder(
 ) {
   const res = await fetch(`${API_BASE}/pos/orders/${orderId}/close-table`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: authHeaders({ "Content-Type": "application/json" }),
     body: JSON.stringify(payload),
   });
   if (!res.ok) {
@@ -134,7 +170,9 @@ export async function closeTableOrder(
 }
 
 export async function fetchPosOrders(locationId: number): Promise<PosOrder[]> {
-  const res = await fetch(`${API_BASE}/pos/orders?location_id=${locationId}`);
+  const res = await fetch(`${API_BASE}/pos/orders?location_id=${locationId}`, {
+    headers: authHeaders(),
+  });
   if (!res.ok) throw new Error("Не вдалося завантажити замовлення");
   return res.json();
 }
@@ -142,6 +180,7 @@ export async function fetchPosOrders(locationId: number): Promise<PosOrder[]> {
 export async function updateOrderStatus(orderId: number, statusVal: string) {
   const res = await fetch(`${API_BASE}/pos/orders/${orderId}/status?status_val=${statusVal}`, {
     method: "PATCH",
+    headers: authHeaders(),
   });
   if (!res.ok) throw new Error("Не вдалося змінити статус замовлення");
   return res.json();
@@ -150,6 +189,7 @@ export async function updateOrderStatus(orderId: number, statusVal: string) {
 export async function removeOrderItem(orderId: number, itemId: number) {
   const res = await fetch(`${API_BASE}/pos/orders/${orderId}/items/${itemId}`, {
     method: "DELETE",
+    headers: authHeaders(),
   });
   if (!res.ok) {
     const err = await res.json().catch(() => ({ detail: "Помилка видалення страви" }));
@@ -161,7 +201,7 @@ export async function removeOrderItem(orderId: number, itemId: number) {
 export async function updateOrderItemQty(orderId: number, itemId: number, qty: number) {
   const res = await fetch(`${API_BASE}/pos/orders/${orderId}/items/${itemId}/qty`, {
     method: "PATCH",
-    headers: { "Content-Type": "application/json" },
+    headers: authHeaders({ "Content-Type": "application/json" }),
     body: JSON.stringify({ qty }),
   });
   if (!res.ok) {
@@ -174,7 +214,7 @@ export async function updateOrderItemQty(orderId: number, itemId: number, qty: n
 export async function cancelPosOrder(orderId: number, reason: string, staffName?: string) {
   const res = await fetch(`${API_BASE}/pos/orders/${orderId}/cancel`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: authHeaders({ "Content-Type": "application/json" }),
     body: JSON.stringify({ reason, staff_name: staffName }),
   });
   if (!res.ok) {
@@ -185,7 +225,9 @@ export async function cancelPosOrder(orderId: number, reason: string, staffName?
 }
 
 export async function fetchCurrentShift(locationId: number) {
-  const res = await fetch(`${API_BASE}/pos/shifts/current?location_id=${locationId}`);
+  const res = await fetch(`${API_BASE}/pos/shifts/current?location_id=${locationId}`, {
+    headers: authHeaders(),
+  });
   if (!res.ok) throw new Error("Помилка завантаження зміни");
   return res.json();
 }
@@ -193,7 +235,7 @@ export async function fetchCurrentShift(locationId: number) {
 export async function openPosShift(payload: PosShiftOpenPayload) {
   const res = await fetch(`${API_BASE}/pos/shifts/open`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: authHeaders({ "Content-Type": "application/json" }),
     body: JSON.stringify(payload),
   });
   if (!res.ok) {
@@ -206,7 +248,7 @@ export async function openPosShift(payload: PosShiftOpenPayload) {
 export async function addCashOperation(payload: PosCashOperationPayload) {
   const res = await fetch(`${API_BASE}/pos/shifts/cash-op`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: authHeaders({ "Content-Type": "application/json" }),
     body: JSON.stringify(payload),
   });
   if (!res.ok) {
@@ -219,7 +261,7 @@ export async function addCashOperation(payload: PosCashOperationPayload) {
 export async function closePosShift(payload: PosShiftClosePayload) {
   const res = await fetch(`${API_BASE}/pos/shifts/close`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: authHeaders({ "Content-Type": "application/json" }),
     body: JSON.stringify(payload),
   });
   if (!res.ok) {

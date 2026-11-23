@@ -1,3 +1,5 @@
+import { getAuthHeaders } from "../types/user.ts";
+
 export interface BonusTransaction {
   id: number;
   user_id: number;
@@ -21,7 +23,11 @@ export async function fetchBonusHistory(params: {
   if (parts.length === 0) return [];
 
   try {
-    const res = await fetch(`/api/auth/bonuses/history?${parts.join("&")}`);
+    const res = await fetch(`/api/auth/bonuses/history?${parts.join("&")}`, {
+      headers: {
+        ...getAuthHeaders(),
+      },
+    });
     if (!res.ok) return [];
     return res.json();
   } catch {

@@ -405,20 +405,18 @@ class TestSecurityVulnerabilityFixes:
 
     async def test_update_web_profile_sync_success(self, async_client, mock_db_conn):
         """Перевірка синхронізації номеру телефону та даних з сайту для telegram_id."""
-        mock_db_conn.fetchrow.side_effect = [
-            None,  # не знайдено existing
-            {  # new_row після INSERT
-                "id": 42,
-                "telegram_id": 999888,
-                "full_name": "Іван Тестовий",
-                "first_name": "Іван",
-                "last_name": "Тестовий",
-                "phone": "+380509998877",
-                "delivery_address": "просп. Шевченка, 2Д",
-                "additional_address": None,
-                "is_phone_verified": False,
-            },
-        ]
+        mock_db_conn.fetchrow.return_value = {
+            "id": 1,
+            "telegram_id": 999888,
+            "full_name": "Іван Тестовий",
+            "first_name": "Іван",
+            "last_name": "Тестовий",
+            "phone": "+380509998877",
+            "delivery_address": "просп. Шевченка, 2Д",
+            "additional_address": None,
+            "is_phone_verified": False,
+            "bonus_balance": 50,
+        }
         resp = await async_client.post(
             "/api/auth/web-profile",
             json={
@@ -426,6 +424,7 @@ class TestSecurityVulnerabilityFixes:
                 "phone": "+380509998877",
                 "full_name": "Іван Тестовий",
                 "delivery_address": "просп. Шевченка, 2Д",
+                "bonus_balance": 999999,  # спроба ін'єкції бонусів
             },
         )
         assert resp.status_code == 200
@@ -433,50 +432,39 @@ class TestSecurityVulnerabilityFixes:
         assert data["telegram_id"] == 999888
         assert data["phone"] == "+380509998877"
         assert data["full_name"] == "Іван Тестовий"
+        assert data["bonus_balance"] == 50  # бонуси не змінилися
 
     async def test_get_web_profile_by_telegram_id(self, async_client, mock_db_conn):
-        """Перевірка отримання профілю за telegram_id."""
-        mock_db_conn.fetchrow.return_value = {
-            "id": 1,
-            "telegram_id": 395090043,
-            "full_name": "Олександр Нікіга",
-            "first_name": "Олександр",
-            "last_name": "Нікіга",
-            "phone": "+380631395639",
-            "delivery_address": "м. Вишгород, просп. Шевченка, буд. 6а",
-            "additional_address": None,
-            "is_phone_verified": True,
-        }
-        resp = await async_client.get("/api/auth/web-profile?telegram_id=395090043")
-        assert resp.status_code == 200
-        data = resp.json()
-        assert data["telegram_id"] == 395090043
-        assert data["phone"] == "+380631395639"
-        assert data["is_phone_verified"] is True
+        """Перевірка отримання профілю за telegram_id: власний профіль дозволено, чужий блокується (403)."""
+        # 1. Чужий профіль -> 403
+        resp_forbidden = await async_client.get("/api/auth/web-profile?telegram_id=395090043")
+        assert resp_forbidden.status_code == 403
+
+        # 2. Власний профіль -> 200
+        resp_own = await async_client.get("/api/auth/web-profile?telegram_id=123456789")
+        assert resp_own.status_code == 200
+        data = resp_own.json()
+        assert data["telegram_id"] == 123456789
 
     async def test_get_web_profile_by_phone(self, async_client, mock_db_conn):
-        """Перевірка отримання профілю за номером телефону."""
-        mock_db_conn.fetchrow.return_value = {
-            "id": 1,
-            "telegram_id": 395090043,
-            "full_name": "Олександр Нікіга",
-            "first_name": "Олександр",
-            "last_name": "Нікіга",
-            "phone": "+380631395639",
-            "delivery_address": "м. Вишгород, просп. Шевченка, буд. 6а",
-            "additional_address": None,
-            "is_phone_verified": True,
-        }
-        resp = await async_client.get("/api/auth/web-profile?phone=%2B380631395639")
-        assert resp.status_code == 200
-        data = resp.json()
-        assert data["phone"] == "+380631395639"
-        assert data["is_phone_verified"] is True
+        """Перевірка отримання профілю за номером телефону: власний дозволено, чужий блокується (403)."""
+        # 1. Чужий телефон -> 403
+        resp_forbidden = await async_client.get("/api/auth/web-profile?phone=%2B380631395639")
+        assert resp_forbidden.status_code == 403
+
+        # 2. Власний телефон -> 200
+        resp_own = await async_client.get("/api/auth/web-profile?phone=%2B380931112233")
+        assert resp_own.status_code == 200
+        data = resp_own.json()
+        assert data["phone"] == "+380931112233"
 
     async def test_get_web_profile_missing_params(self, async_client):
-        """Перевірка помилки 400 якщо не вказано ані telegram_id, ані phone."""
+        """Якщо параметри не вказано, повертається профіль поточного авторизованого користувача."""
         resp = await async_client.get("/api/auth/web-profile")
-        assert resp.status_code == 400
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["telegram_id"] == 123456789
+        assert data["phone"] == "+380931112233"
 
 
     async def test_phone_auth_endpoints_disabled(self, async_client):
@@ -668,6 +656,356 @@ class TestSecurityVulnerabilityFixes:
         opened = Image.open(saved_file)
         assert opened.format == "WEBP"
         assert opened.size == (1200, 900)
+
+    def test_staff_token_create_and_verify(self, test_bot_token):
+        """Перевірка генерації та валідації staff-токена (s1.staff_id...)."""
+        from src.auth.admin_token import create_staff_token, verify_staff_token
+
+        token = create_staff_token(staff_id=42, secret_key=test_bot_token, days=7)
+        assert token.startswith("s1.42.")
+
+        # Валідна перевірка
+        staff_id = verify_staff_token(token, secret_key=test_bot_token)
+        assert staff_id == 42
+
+        # Невалідний секретний ключ
+        assert verify_staff_token(token, secret_key="wrong_secret") is None
+
+        # Прострочений токен (-1 день)
+        expired_token = create_staff_token(staff_id=42, secret_key=test_bot_token, days=-1)
+        assert verify_staff_token(expired_token, secret_key=test_bot_token) is None
+
+    async def test_pos_orders_endpoint_requires_staff(self, async_client, mock_db_conn):
+        """Ендпоінт /api/pos/orders вимагає прав персоналу (403 якщо не в managers)."""
+        mock_db_conn.fetchrow.return_value = None
+        res = await async_client.get("/api/pos/orders?location_id=1")
+        assert res.status_code == 403
+        assert "Тільки для персоналу" in res.json()["detail"]
+
+    async def test_pos_pin_auth_with_pbkdf2_hash(
+        self, async_client, mock_db_conn, test_bot_token
+    ):
+        """Вхід за PIN-кодом перевіряє PBKDF2 хеш і видає підписаний s1-токен."""
+        from src.auth.admin_token import verify_staff_token
+        from src.auth.password import hash_password
+
+        hashed_pin = hash_password("2222")
+        mock_db_conn.fetchrow.return_value = {
+            "id": 2,
+            "staff_name": "Іван Офіціант",
+            "role": "waiter",
+            "location_id": 1,
+            "pin_code": hashed_pin,
+            "telegram_id": None,
+            "location_name": "Urban Pizza",
+        }
+
+        res = await async_client.post(
+            "/api/pos/auth/pin",
+            json={"staff_id": 2, "pin": "2222"},
+        )
+        assert res.status_code == 200
+        data = res.json()
+        assert data["token"].startswith("s1.2.")
+        assert data["staff"]["staff_name"] == "Іван Офіціант"
+
+        # Перевіряємо валідність виданого токена
+        staff_id = verify_staff_token(data["token"], secret_key=test_bot_token)
+        assert staff_id == 2
+
+    async def test_pos_pin_auth_invalid_pin_rejected(
+        self, async_client, mock_db_conn
+    ):
+        """Невірний PIN-код повертає 401 Unauthorized."""
+        from src.auth.password import hash_password
+
+        mock_db_conn.fetchrow.return_value = {
+            "id": 2,
+            "staff_name": "Іван",
+            "role": "waiter",
+            "location_id": 1,
+            "pin_code": hash_password("2222"),
+            "telegram_id": None,
+            "location_name": "Urban Pizza",
+        }
+
+        res = await async_client.post(
+            "/api/pos/auth/pin",
+            json={"staff_id": 2, "pin": "9999"},
+        )
+        assert res.status_code == 401
+        assert "невірний pin-код" in res.json()["detail"].lower()
+
+    async def test_phone_login_without_password_does_not_issue_auth_token(
+        self, async_client, mock_db_conn
+    ):
+        """Анонімний вхід за телефоном не видає підписаний токен авторизації."""
+        mock_db_conn.fetchrow.return_value = {
+            "id": 100,
+            "telegram_id": None,
+            "full_name": "Гість",
+            "first_name": "Гість",
+            "last_name": None,
+            "phone": "+380501112233",
+            "delivery_address": None,
+            "additional_address": None,
+            "is_phone_verified": False,
+            "bonus_balance": 50,
+            "password_hash": None,
+            "phone_code": None,
+            "phone_code_expires_at": None,
+        }
+        res = await async_client.post(
+            "/api/auth/phone-login",
+            json={"phone": "+380501112233", "full_name": "Гість"},
+        )
+        assert res.status_code == 200
+        data = res.json()
+        assert data["auth_token"] is None
+
+    async def test_phone_login_with_password_success_and_failure(
+        self, async_client, mock_db_conn
+    ):
+        """Вхід за паролем: успіх з правильним паролем (токен u1) і 401 з неправильним."""
+        from src.auth.password import hash_password
+
+        pwd_hash = hash_password("SecretPass123")
+        mock_db_conn.fetchrow.return_value = {
+            "id": 101,
+            "telegram_id": None,
+            "full_name": "Користувач",
+            "first_name": "Користувач",
+            "last_name": None,
+            "phone": "+380509990011",
+            "delivery_address": None,
+            "additional_address": None,
+            "is_phone_verified": True,
+            "bonus_balance": 150,
+            "password_hash": pwd_hash,
+            "phone_code": None,
+            "phone_code_expires_at": None,
+        }
+
+        # 1. Неправильний пароль -> 401
+        res_fail = await async_client.post(
+            "/api/auth/phone-login",
+            json={"phone": "+380509990011", "password": "WrongPassword"},
+        )
+        assert res_fail.status_code == 401
+        assert "невірний пароль" in res_fail.json()["detail"].lower()
+
+        # 2. Правильний пароль -> 200 + u1 токен
+        res_ok = await async_client.post(
+            "/api/auth/phone-login",
+            json={"phone": "+380509990011", "password": "SecretPass123"},
+        )
+        assert res_ok.status_code == 200
+        data = res_ok.json()
+        assert data["auth_token"] is not None
+        assert data["auth_token"].startswith("u1.101.")
+
+    async def test_web_order_bonus_theft_rejected_without_matching_auth(
+        self, async_client, mock_db_conn
+    ):
+        """Спроба списати бонуси без автентифікації або з чужого акаунта блокується (403)."""
+        # Спроба відправити веб-замовлення зі списанням 100 бонусів
+        web_payload = {
+            "location_id": 2,
+            "fulfillment_type": "pickup",
+            "contact_name": "Крадій",
+            "contact_phone": "+380671112233",
+            "payment_method": "cash",
+            "bonus_spent": 100,
+            "source": "web_croissants",
+            "items": [
+                {
+                    "variant_id": 10,
+                    "qty": 2,
+                    "option_variant_ids": [],
+                }
+            ],
+        }
+
+        # База повертає локацію, страву та користувача-жертву (id=99, відмінний від тестового id=1)
+        mock_db_conn.fetchrow.side_effect = [
+            # 1. loc_row
+            {
+                "id": 2,
+                "name": "Doma Croissants",
+                "is_delivery_enabled": True,
+                "delivery_start_time": "08:00",
+                "delivery_end_time": "21:00",
+            },
+            # 2. user_row жертви з id=99
+            {
+                "id": 99,
+                "telegram_id": 999999,
+                "phone": "+380671112233",
+                "full_name": "Жертва Крадіжки",
+                "is_phone_verified": True,
+            },
+        ]
+        mock_db_conn.fetch.side_effect = [
+            # 1. variants_sql
+            [
+                {
+                    "variant_id": 10,
+                    "price": 100.0,
+                    "variant_label": "Стандарт",
+                    "pv_avail": True,
+                    "product_id": 5,
+                    "product_name": "Круасан",
+                    "p_avail": True,
+                    "location_id": 2,
+                }
+            ],
+            # 2. options_sql
+            [],
+        ]
+
+        resp = await async_client.post("/api/orders/web", json=web_payload)
+        assert resp.status_code == 403
+        assert "списання бонусів" in resp.json()["detail"].lower()
+
+    async def test_catalog_bypass_cache_requires_cryptographic_admin_token(
+        self, async_client, mock_db_conn, test_bot_token
+    ):
+        """Параметр bypass_cache вимагає дійсного підписаного токена персоналу; фейковий токен ігнорується."""
+        from unittest.mock import patch
+        from src.auth.admin_token import create_admin_token
+
+        valid_tok = create_admin_token(999, test_bot_token)
+
+        with patch("src.services.catalog_service.CatalogService.list_categories") as mock_list:
+            mock_list.return_value = []
+
+            # 1. Запит з фейковим токеном -> bypass_cache=False (кеш використовується)
+            await async_client.get(
+                "/api/categories?bypass_cache=true",
+                headers={"X-Admin-Token": "fake_invalid_token"},
+            )
+            assert mock_list.call_args.kwargs["bypass_cache"] is False
+
+            # 2. Запит з валідним криптографічним токеном -> bypass_cache=True
+            await async_client.get(
+                "/api/categories?bypass_cache=true",
+                headers={"X-Admin-Token": valid_tok},
+            )
+            assert mock_list.call_args.kwargs["bypass_cache"] is True
+
+    async def test_web_order_tracking_idor_protection(
+        self, async_client, mock_db_conn, test_bot_token
+    ):
+        """Публічний перегляд замовлення без токена блокується (403), а з коректним HMAC tracking_token дозволяється."""
+        from datetime import datetime
+        from unittest.mock import patch
+        from src.auth.admin_token import create_order_tracking_token
+        from src.schemas.order import OrderOut
+
+        order_id = 777
+        valid_track_token = create_order_tracking_token(order_id, test_bot_token)
+
+        fake_order = OrderOut(
+            id=order_id,
+            status="confirmed",
+            fulfillment_type="delivery",
+            delivery_address="м. Київ, вул. Хрещатик, 1",
+            contact_name="VIP Клієнт",
+            contact_phone="+380991234567",
+            payment_method="card",
+            total_price=500.0,
+            created_at=datetime.now(UTC),
+            groups=[],
+        )
+
+        with patch("src.services.order_service.OrderService.fetch_order_by_id", return_value=fake_order):
+            # 1. Запит без токена відстеження та без авторизації власника -> 403
+            res_forbidden = await async_client.get(f"/api/orders/web/{order_id}")
+            assert res_forbidden.status_code == 403
+            assert "токен відстеження" in res_forbidden.json()["detail"].lower()
+
+            # 2. Запит з недійсним токеном -> 403
+            res_bad_tok = await async_client.get(f"/api/orders/web/{order_id}?token=ot1.777.badsignature")
+            assert res_bad_tok.status_code == 403
+
+            # 3. Запит з валідним tracking token -> 200 OK
+            res_ok = await async_client.get(f"/api/orders/web/{order_id}?token={valid_track_token}")
+            assert res_ok.status_code == 200
+            data = res_ok.json()
+            assert data["id"] == order_id
+            assert data["contact_name"] == "VIP Клієнт"
+            assert data["tracking_token"] is not None
+
+    def test_telegram_init_data_replay_and_future_timestamp_prevention(self, test_bot_token):
+        """Telegram initData блокує час з майбутнього та застарілі підписи (24 години)."""
+        import time
+        from tests.conftest import build_test_init_data
+        from src.auth.telegram_init_data import validate_init_data
+
+        now = int(time.time())
+
+        # 1. Час із майбутнього (+10 хвилин) -> помилка
+        future_data = build_test_init_data(
+            user_id=123, bot_token=test_bot_token, auth_date=now + 600
+        )
+        with pytest.raises(ValueError, match="недійсний час авторизації"):
+            validate_init_data(future_data, bot_token=test_bot_token)
+
+        # 2. Підпис старший за 24 години (25 годин) -> застарілі дані
+        old_data = build_test_init_data(
+            user_id=123, bot_token=test_bot_token, auth_date=now - (25 * 3600)
+        )
+        with pytest.raises(ValueError, match="Дані застаріли"):
+            validate_init_data(old_data, bot_token=test_bot_token)
+
+        # 3. Свіжий підпис (5 хвилин тому) -> успіх
+        fresh_data = build_test_init_data(
+            user_id=123, bot_token=test_bot_token, auth_date=now - 300
+        )
+        parsed = validate_init_data(fresh_data, bot_token=test_bot_token)
+        assert parsed["user"]["id"] == 123
+
+    async def test_svg_upload_is_blocked(self, async_client, valid_admin_token, mock_db_conn):
+        """Завантаження SVG файлів заборонено для усунення ризику Stored XSS."""
+        mock_db_conn.fetchrow.return_value = {
+            "id": 1,
+            "telegram_id": 999999999,
+            "role": "admin",
+            "is_active": True,
+        }
+
+        # Спроба завантажити шкідливий SVG
+        svg_content = b'<svg onload="alert(1)"><circle cx="50" cy="50" r="40"/></svg>'
+        files = {"file": ("malicious.svg", svg_content, "image/svg+xml")}
+
+        res = await async_client.post(
+            "/api/admin/upload",
+            files=files,
+            headers={"X-Admin-Token": valid_admin_token},
+        )
+        assert res.status_code == 400
+        assert "Непідтримуваний формат" in res.json()["detail"] or "Непідтримуваний MIME" in res.json()["detail"]
+
+    async def test_cached_static_files_security_headers(self, async_client):
+        """Статичні файли в /api/uploads віддаються із заголовками безпеки nosniff та sandbox CSP."""
+        from pathlib import Path
+        from src.main import _uploads_dir
+
+        path = Path(_uploads_dir)
+        path.mkdir(parents=True, exist_ok=True)
+
+        test_file = path / "test_security_header.png"
+        test_file.write_bytes(b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01\x08\x06\x00\x00\x00\x1f\x15c4\x00\x00\x00\nIDATx\x9cc\x00\x01\x00\x00\x05\x00\x01\r\n-\xb4\x00\x00\x00\x00IEND\xaeB`\x82")
+
+        try:
+            res = await async_client.get("/api/uploads/test_security_header.png")
+            assert res.status_code == 200
+            assert res.headers.get("X-Content-Type-Options") == "nosniff"
+            assert "sandbox" in res.headers.get("Content-Security-Policy", "")
+        finally:
+            if test_file.exists():
+                test_file.unlink()
+
 
 
 

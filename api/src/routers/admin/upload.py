@@ -21,13 +21,12 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
-ALLOWED_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp", ".gif", ".svg", ".heic", ".heif"}
+ALLOWED_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp", ".gif", ".heic", ".heif"}
 ALLOWED_CONTENT_TYPES = {
     "image/jpeg",
     "image/png",
     "image/webp",
     "image/gif",
-    "image/svg+xml",
     "image/heic",
     "image/heif",
     "application/octet-stream",
@@ -86,8 +85,8 @@ async def upload_image(
     final_width: int | None = None
     final_height: int | None = None
 
-    # Якщо це векторна графіка, GIF-анімація або відсутній модуль Pillow — зберігаємо як є
-    if ext in {".svg", ".gif"} or not HAS_PILLOW:
+    # Якщо це GIF-анімація або відсутній модуль Pillow — зберігаємо як є
+    if ext == ".gif" or not HAS_PILLOW:
         unique_name = f"{uuid.uuid4().hex[:16]}{ext}"
         file_path = uploads_dir / unique_name
         async with aiofiles.open(file_path, "wb") as out_file:

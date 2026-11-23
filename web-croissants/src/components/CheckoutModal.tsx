@@ -348,6 +348,7 @@ export function CheckoutModal({
           isAuthenticated: Boolean(
             prevProf.isAuthenticated || createdOrder.telegram_id || cleanPhone,
           ),
+          auth_token: prevProf.auth_token,
         };
         saveSharedProfile(updatedProf);
 

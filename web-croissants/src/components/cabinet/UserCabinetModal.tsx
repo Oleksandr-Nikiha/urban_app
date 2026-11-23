@@ -156,6 +156,7 @@ export function UserCabinetModal({
                   additional_address: prev.additional_address || serverUser.additional_address || "",
                   client_code: serverUser.client_code || prev.client_code,
                   bonuses: serverUser.bonus_balance ?? prev.bonuses ?? 50,
+                  auth_token: serverUser.auth_token || prev.auth_token,
                 };
                 saveSharedProfile(merged);
                 if (onProfileUpdated) onProfileUpdated(merged);
@@ -306,6 +307,7 @@ export function UserCabinetModal({
                 Boolean(prev.telegram_id),
               client_code: userOut.client_code || prev.client_code,
               bonuses: userOut.bonus_balance ?? prev.bonuses ?? 50,
+              auth_token: userOut.auth_token || prev.auth_token,
             };
             saveSharedProfile(synced);
             if (onProfileUpdated) onProfileUpdated(synced);
@@ -348,6 +350,7 @@ export function UserCabinetModal({
         client_code: userOut.client_code || `UB-${userOut.telegram_id}`,
         is_phone_verified: true,
         isAuthenticated: true,
+        auth_token: userOut.auth_token || profile.auth_token,
       };
       if (userOut.delivery_address && !profile.street) {
         updatedProfile.street = userOut.delivery_address;

@@ -65,6 +65,7 @@ export interface OrderOut {
   bonus_earned?: number;
   created_at: string;
   source: string;
+  tracking_token?: string | null;
   groups: OrderGroupOut[];
 }
 

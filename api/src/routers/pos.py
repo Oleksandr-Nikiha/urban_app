@@ -1,13 +1,17 @@
+import asyncio
 import html
 import logging
 from typing import Any
 
 import asyncpg
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, Request, status
 
-from src.auth.admin_token import create_admin_token
+from src.auth.admin_token import create_staff_token
+from src.auth.deps import get_current_staff
+from src.auth.password import hash_password, verify_password
 from src.config import get_settings
 from src.db.connection import get_pool
+from src.middleware.rate_limiter import rate_limiter
 from src.schemas.pos import (
     PosAddItemsIn,
     PosAuthOut,
@@ -30,7 +34,7 @@ from src.services.telegram_client import send_telegram_message
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/api/pos", tags=["pos"])
+router = APIRouter(prefix="/api/pos", tags=["pos"], dependencies=[Depends(rate_limiter)])
 
 
 @router.get("/staff", response_model=list[PosStaffMemberOut])
@@ -57,11 +61,47 @@ async def list_pos_staff(pool: asyncpg.Pool = Depends(get_pool)):
 @router.post("/auth/pin", response_model=PosAuthOut)
 async def auth_pos_by_pin(
     payload: PosPinAuthIn,
+    request: Request,
     pool: asyncpg.Pool = Depends(get_pool),
 ):
-    """Швидка авторизація співробітника за PIN-кодом."""
+    """
+    Швидка та безпечна авторизація співробітника за PIN-кодом.
+    - Захист від брутфорсу через Redis (ліміт невдалих спроб)
+    - Перевірка хешованого PIN (PBKDF2)
+    - Авто-міграція плейнтекст PIN на хеш при першому вході
+    - Видача підписаного staff-токена (s1...)
+    """
     clean_pin = payload.pin.strip()
     settings = get_settings()
+
+    # Отримуємо IP клієнта для захисту від брутфорсу
+    forwarded = request.headers.get("x-forwarded-for")
+    if forwarded:
+        client_ip = forwarded.split(",")[-1].strip()
+    elif request.client and request.client.host:
+        client_ip = request.client.host
+    else:
+        client_ip = "unknown"
+
+    from src.db.redis import get_redis
+
+    redis_client = get_redis()
+    fail_key = f"rl:pos_pin_fail:{client_ip}"
+
+    if redis_client:
+        try:
+            fails = await redis_client.get(fail_key)
+            if fails and int(fails) >= 5:
+                ttl = await redis_client.ttl(fail_key)
+                logger.warning("Блокування брутфорсу PIN для IP %s (TTL: %ds)", client_ip, ttl)
+                raise HTTPException(
+                    status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                    detail=f"Забагато невірних спроб вводу PIN-коду. Спробуйте через {max(ttl, 1)} с.",
+                )
+        except HTTPException:
+            raise
+        except Exception as e:
+            logger.warning("Помилка Redis при перевірці ліміту PIN: %s", e)
 
     async with pool.acquire() as conn:
         if payload.staff_id:
@@ -82,7 +122,7 @@ async def auth_pos_by_pin(
                 payload.staff_id,
             )
         else:
-            row = await conn.fetchrow(
+            candidates = await conn.fetch(
                 """
                 SELECT m.id,
                        COALESCE(m.staff_name, u.first_name, 'Співробітник') AS staff_name,
@@ -94,26 +134,55 @@ async def auth_pos_by_pin(
                 FROM managers m
                 LEFT JOIN users u ON u.telegram_id = m.telegram_id
                 LEFT JOIN locations l ON l.id = m.location_id
-                WHERE m.pin_code = $1 AND m.is_active = true
-                LIMIT 1
-                """,
-                clean_pin,
+                WHERE m.is_active = true AND m.pin_code IS NOT NULL
+                """
             )
+            row = None
+            for cand in candidates:
+                stored = cand["pin_code"]
+                if stored and (verify_password(clean_pin, stored) or stored == clean_pin):
+                    row = cand
+                    break
 
-        if not row:
+        is_pin_valid = False
+        if row and row["pin_code"]:
+            stored_pin = row["pin_code"]
+            if verify_password(clean_pin, stored_pin):
+                is_pin_valid = True
+            elif stored_pin == clean_pin:
+                is_pin_valid = True
+                try:
+                    new_hash = hash_password(clean_pin)
+                    await conn.execute(
+                        "UPDATE managers SET pin_code = $1 WHERE id = $2", new_hash, row["id"]
+                    )
+                    logger.info(
+                        "PIN-код співробітника id=%s успішно оновлено до PBKDF2 хешу", row["id"]
+                    )
+                except Exception as exc:
+                    logger.warning("Помилка автооновлення хешу PIN: %s", exc)
+
+        if not row or not is_pin_valid:
+            if redis_client:
+                try:
+                    cur = await redis_client.incr(fail_key)
+                    if cur == 1:
+                        await redis_client.expire(fail_key, 300)
+                except Exception as err:
+                    logger.warning("Помилка Redis incr: %s", err)
+            await asyncio.sleep(0.5)
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Працівника не знайдено або невірний PIN-код",
             )
 
-        if row["pin_code"] != clean_pin:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Невірний PIN-код",
-            )
+        if redis_client:
+            try:
+                await redis_client.delete(fail_key)
+            except Exception:
+                pass
 
-        tg_id = row["telegram_id"] or row["id"]
-        token = create_admin_token(tg_id, settings.bot_token)
+        token = create_staff_token(staff_id=row["id"], secret_key=settings.bot_token, days=7)
 
         staff_data = PosStaffMemberOut(
             id=row["id"],
@@ -129,6 +198,7 @@ async def auth_pos_by_pin(
 @router.get("/customer", response_model=PosCustomerLookupOut)
 async def lookup_pos_customer(
     query: str = Query(..., min_length=3, description="Номер телефону або ім'я гостя"),
+    staff: asyncpg.Record = Depends(get_current_staff),
     pool: asyncpg.Pool = Depends(get_pool),
 ):
     """Пошук клієнта для швидкого нарахування або списання бонусів URBAN CLUB."""
@@ -176,6 +246,7 @@ async def lookup_pos_customer(
 @router.post("/customer/register", response_model=PosCustomerRegisterOut)
 async def register_pos_customer(
     payload: PosCustomerRegisterIn,
+    staff: asyncpg.Record = Depends(get_current_staff),
     pool: asyncpg.Pool = Depends(get_pool),
 ):
     """Ручна реєстрація гостя за номером телефону та іменем з нарахуванням 50 вітальних бонусів."""
@@ -225,6 +296,7 @@ async def register_pos_customer(
 @router.get("/menu")
 async def get_pos_menu(
     location_id: int = Query(..., description="ID закладу (1 - Pizza, 2 - Bakery)"),
+    staff: asyncpg.Record = Depends(get_current_staff),
     pool: asyncpg.Pool = Depends(get_pool),
 ):
     """
@@ -339,6 +411,7 @@ async def get_pos_menu(
 async def create_pos_order(
     payload: PosOrderCreateIn,
     background_tasks: BackgroundTasks,
+    staff: asyncpg.Record = Depends(get_current_staff),
     pool: asyncpg.Pool = Depends(get_pool),
 ):
     """
@@ -349,6 +422,8 @@ async def create_pos_order(
     - Сповіщає менеджерів у Telegram
     """
     settings = get_settings()
+    if not payload.staff_name:
+        payload.staff_name = staff.get("staff_name") or staff.get("full_name") or "Співробітник"
 
     async with pool.acquire() as conn:
         async with conn.transaction():
@@ -617,6 +692,7 @@ async def create_pos_order(
 async def list_pos_orders(
     location_id: int = Query(..., description="ID закладу"),
     limit: int = Query(30, ge=1, le=100),
+    staff: asyncpg.Record = Depends(get_current_staff),
     pool: asyncpg.Pool = Depends(get_pool),
 ):
     """Список останніх замовлень на POS для перегляду чеків та статусів."""
@@ -671,6 +747,7 @@ async def list_pos_orders(
 @router.patch("/order-items/{item_id}/toggle-served")
 async def toggle_item_served(
     item_id: int,
+    staff: asyncpg.Record = Depends(get_current_staff),
     pool: asyncpg.Pool = Depends(get_pool),
 ):
     """Перемикає статус 'Подано/Винесено' для окремої страви в замовленні."""
@@ -689,6 +766,7 @@ async def add_items_to_pos_order(
     order_id: int,
     payload: PosAddItemsIn,
     background_tasks: BackgroundTasks,
+    staff: asyncpg.Record = Depends(get_current_staff),
     pool: asyncpg.Pool = Depends(get_pool),
 ):
     """Динамічно додає нові позиції або збільшує кількість у відкритому замовленні столу."""
@@ -864,6 +942,7 @@ async def close_pos_table_order(
     order_id: int,
     payload: PosCloseTableIn,
     background_tasks: BackgroundTasks,
+    staff: asyncpg.Record = Depends(get_current_staff),
     pool: asyncpg.Pool = Depends(get_pool),
 ):
     """Розрахунок та закриття столу (оплата після обслуговування)."""
@@ -978,6 +1057,7 @@ async def close_pos_table_order(
 async def update_pos_order_status(
     order_id: int,
     status_val: str = Query(..., regex="^(ready|completed|cancelled)$"),
+    staff: asyncpg.Record = Depends(get_current_staff),
     pool: asyncpg.Pool = Depends(get_pool),
 ):
     """Оновлення статусу замовлення з POS-терміналу (готове / видане / скасоване)."""
@@ -1010,6 +1090,7 @@ async def update_pos_order_status(
 async def remove_item_from_pos_order(
     order_id: int,
     item_id: int,
+    staff: asyncpg.Record = Depends(get_current_staff),
     pool: asyncpg.Pool = Depends(get_pool),
 ):
     """Видаляє окрему страву з відкритого замовлення столу та перераховує чек."""
@@ -1078,6 +1159,7 @@ async def update_item_qty_in_pos_order(
     order_id: int,
     item_id: int,
     payload: PosOrderItemUpdateQtyIn,
+    staff: asyncpg.Record = Depends(get_current_staff),
     pool: asyncpg.Pool = Depends(get_pool),
 ):
     """Змінює кількість порцій страви у відкритому чеку з перерахунком суми."""
@@ -1147,6 +1229,7 @@ async def cancel_pos_order(
     order_id: int,
     payload: PosOrderCancelIn,
     background_tasks: BackgroundTasks,
+    staff: asyncpg.Record = Depends(get_current_staff),
     pool: asyncpg.Pool = Depends(get_pool),
 ):
     """Повне скасування замовлення/столу з обов'язковим зазначенням причини."""
@@ -1235,6 +1318,7 @@ async def cancel_pos_order(
 @router.get("/shifts/current")
 async def get_current_shift(
     location_id: int,
+    staff: asyncpg.Record = Depends(get_current_staff),
     pool: asyncpg.Pool = Depends(get_pool),
 ):
     """Отримує поточну відкриту зміну для закладу з розрахованими показниками."""
@@ -1300,6 +1384,7 @@ async def get_current_shift(
 @router.post("/shifts/open")
 async def open_shift(
     payload: PosShiftOpenIn,
+    staff: asyncpg.Record = Depends(get_current_staff),
     pool: asyncpg.Pool = Depends(get_pool),
 ):
     """Відкриває нову касову зміну для закладу."""
@@ -1319,7 +1404,7 @@ async def open_shift(
             """,
             payload.location_id,
             payload.opened_by_id,
-            payload.opened_by_name,
+            payload.opened_by_name or staff.get("staff_name") or "Співробітник",
             payload.opening_cash,
             payload.notes,
         )
@@ -1329,6 +1414,7 @@ async def open_shift(
 @router.post("/shifts/cash-op")
 async def add_cash_operation(
     payload: PosShiftCashOpIn,
+    staff: asyncpg.Record = Depends(get_current_staff),
     pool: asyncpg.Pool = Depends(get_pool),
 ):
     """Службове внесення або службове вилучення готівки в касі."""
@@ -1349,7 +1435,7 @@ async def add_cash_operation(
                 """,
                 shift_id,
                 payload.location_id,
-                payload.staff_name,
+                payload.staff_name or staff.get("staff_name") or "Співробітник",
                 payload.operation_type,
                 payload.amount,
                 payload.reason,
@@ -1380,6 +1466,7 @@ async def add_cash_operation(
 async def close_shift(
     payload: PosShiftCloseIn,
     background_tasks: BackgroundTasks,
+    staff: asyncpg.Record = Depends(get_current_staff),
     pool: asyncpg.Pool = Depends(get_pool),
 ):
     """Закриває касову зміну (Z-звіт), фіксує фактичну готівку та сповіщає менеджерів."""

@@ -1,7 +1,9 @@
 import asyncpg
 from fastapi import APIRouter, Depends, Header, Query
 
-from src.auth.deps import admin_token_header
+from src.auth.admin_token import verify_admin_token, verify_staff_token
+from src.auth.deps import _get_fallback_tokens, admin_token_header
+from src.config import get_settings
 from src.db.connection import get_pool
 from src.middleware.rate_limiter import rate_limiter
 from src.schemas.catalog import (
@@ -18,16 +20,30 @@ router = APIRouter(
 )
 
 
+def _is_valid_staff_token(token: str | None, settings) -> bool:
+    """Перевіряє криптографічний підпис токена персоналу перед обходом кешу."""
+    if not token or not isinstance(token, str):
+        return False
+    fallback = _get_fallback_tokens(settings)
+    if token.startswith("v1."):
+        return verify_admin_token(token, settings.bot_token, fallback) is not None
+    if token.startswith("s1."):
+        return verify_staff_token(token, settings.bot_token, fallback) is not None
+    return False
+
+
 @router.get("/categories", response_model=list[CategoryOut])
 async def list_categories(
     location_id: int | None = Query(None, description="Фільтр закладу"),
     bypass_cache: bool = Query(False, description="Отримати свіжі дані повз кеш (тільки персонал)"),
     x_bypass_cache: str | None = Header(None, alias="X-Bypass-Cache"),
     admin_token: str | None = Depends(admin_token_header),
+    settings=Depends(get_settings),
     pool: asyncpg.Pool = Depends(get_pool),
 ):
     """Отримати список активних категорій страв з урахуванням наявності товарів."""
-    should_bypass = bool(admin_token) and (
+    is_staff = _is_valid_staff_token(admin_token, settings)
+    should_bypass = is_staff and (
         bypass_cache or (x_bypass_cache in ("1", "true", "True"))
     )
     return await CatalogService.list_categories(
@@ -43,10 +59,12 @@ async def list_products_by_category(
     bypass_cache: bool = Query(False, description="Отримати свіжі дані повз кеш (тільки персонал)"),
     x_bypass_cache: str | None = Header(None, alias="X-Bypass-Cache"),
     admin_token: str | None = Depends(admin_token_header),
+    settings=Depends(get_settings),
     pool: asyncpg.Pool = Depends(get_pool),
 ):
     """Отримати список доступних страв для обраної категорії."""
-    should_bypass = bool(admin_token) and (
+    is_staff = _is_valid_staff_token(admin_token, settings)
+    should_bypass = is_staff and (
         bypass_cache or (x_bypass_cache in ("1", "true", "True"))
     )
     return await CatalogService.list_products_by_category(
@@ -62,10 +80,12 @@ async def get_product(
     bypass_cache: bool = Query(False, description="Отримати свіжі дані повз кеш (тільки персонал)"),
     x_bypass_cache: str | None = Header(None, alias="X-Bypass-Cache"),
     admin_token: str | None = Depends(admin_token_header),
+    settings=Depends(get_settings),
     pool: asyncpg.Pool = Depends(get_pool),
 ):
     """Отримати повну картку страви з варіантами та групами модифікаторів."""
-    should_bypass = bool(admin_token) and (
+    is_staff = _is_valid_staff_token(admin_token, settings)
+    should_bypass = is_staff and (
         bypass_cache or (x_bypass_cache in ("1", "true", "True"))
     )
     return await CatalogService.get_product_detail(
